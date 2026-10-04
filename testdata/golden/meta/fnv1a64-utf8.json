@@ -1,0 +1,21 @@
+{
+  "id": "meta/fnv1a64-utf8",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §0 stateHash 行",
+  "given": {
+    "algorithm": "fnv1a64",
+    "inputs": [
+      "",
+      "squarefolk",
+      "方族"
+    ]
+  },
+  "expect": {
+    "outputs": [
+      "cbf29ce484222325",
+      "b75a41937c3d3418",
+      "bf587cf5610071cc"
+    ]
+  },
+  "notes": "逐字节 (h^b)*prime、u64 回绕、输入按 UTF-8；空串 = offset basis（自检位）；多字节 '方族' 钉死编码差异"
+}

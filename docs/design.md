@@ -19,6 +19,7 @@
 | v0.10 | PRNG/哈希定案回填（splitmix64 / FNV-1a 64 → core-spec §0，军规 2 措辞同步）；同日 core-spec §0–§4.7 全量冻结、补漏 `train` 动作、登记 T1–T6、12 条黄金向量独立验算通过 |
 | v0.11 | **T6 拍板**：架设型单位（投石）移动后不可攻击 —— 抽象为单位字段 `canAttackAfterMove`（默认 true、投石 false，`units.json` 标注），core-spec §2 谓词 / §4.1-G / 附录同步。另核对基线：城市默认领地 3×3、L4 升级可选一次扩为 5×5、道路可修于中立地（为 T1 铺路） |
 | v0.12 | **T1 拍板（方案 C · 动态扩边）**：领地半径随城市等级（默认 `ceil(level/2)`，逐级值进 balance 的 `borderRadiusByLevel`）、归属 = 最近城市胜出、道路可修于中立地；扩边限制暂不加（T1a 后置）。core-spec §4.3 领地小节、§1/§2 谓词、附录同步 |
+| v0.13 | **D13 定案：core = TypeScript**（理由与 Godot 代价见 §9）；**修正 core-spec §4.1.C 攻击式 E 项下标笔误**（E 恒取输出方自己 —— 与 §3.3 `E(攻)/E(守)` 对齐，向量 `dying-rounds-zero` 期望 6→8）；Phase 1 TS 战斗核心 + 向量 runner 落地，12/12 独立复跑通过 |
 
 ---
 
@@ -967,7 +968,7 @@ sim 测不出**手感**，测不出**真人心理**（虚张声势、威慑、�
 - **D3 · 联机回合模型**：顺序异步 vs 同时提交。建议 M2 前再定。
 - **D6 · 围城机制**：城墙耐久 + 围城计数 vs 打城防血条。
 - **D10 · 标定常数**：`K = 3`、每点减伤 `12%`、`DEF_eff` 上限 `5`、`E = 50%+50%`、`垂死反击 25%` —— M0 自动对局回归后按 §3.7 的三条验收线调参。
-- **D13 · core 实现语言**（Rust / GDScript / TS / Go）—— **与游戏壳语言解耦**（完全可能 Rust core + Godot 壳）。编辑器框架（§6.3）、集成方式（§5.1 的 A/B/C）、"一份实现覆盖几个宿主"全都挂在它之后决策；倾向 Rust（Tauri 直调 + GDExtension + WASM = 一份实现五个宿主），可与 D4 一起在 M1 前定。
+- ✅ **D13 · core 实现语言 = TypeScript**（2026-10-03 拍板）—— 理由：Tauri / Wails 的 UI 层本就是 vite+TS，core 同栈 = **零 FFI、零序列化边界**；web 试玩 `vite build` 直出；JSON 数据与黄金向量原生消费；编辑器框架倾向 Tauri 稳定线 v2。**已知代价**：Godot 壳集成不顺（引擎跑不了 TS，仅 GodotJS 社区方案 / sidecar（iOS 禁子进程）/ 移植三条路）—— 若 D4 最终选 Godot，以**黄金向量为移植验收标准**重写 core（spec-first 的兜底）。确定性细节：u64（PRNG/hash）走 BigInt，配套向量 `testdata/golden/meta/*`；游戏数值全整数 Number（值域 < 2^53）。
 
 **⏸ 暂缓（核心验证后再定）**
 

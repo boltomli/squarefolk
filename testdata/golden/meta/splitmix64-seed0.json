@@ -1,0 +1,19 @@
+{
+  "id": "meta/splitmix64-seed0",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §0 PRNG 行",
+  "given": {
+    "algorithm": "splitmix64",
+    "seed": "0000000000000000",
+    "steps": 4
+  },
+  "expect": {
+    "outputs": [
+      "e220a8397b1dcdaf",
+      "6e789e6aa1b965f4",
+      "06c45d188009454f",
+      "f88bb8a8724c81ec"
+    ]
+  },
+  "notes": "u64 全程回绕，>>> 为逻辑右移；JSON 中 seed 与输出一律 16 位小写 hex —— JS Number 存不了 >2^53 的整数"
+}
