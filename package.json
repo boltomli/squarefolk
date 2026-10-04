@@ -1,0 +1,15 @@
+{
+  "name": "squarefolk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Squarefolk（方族）—— 方形四边网格上的轻量回合制 4X",
+  "license": "CC-BY-NC-SA-4.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node dist/core/test/combat-vector-runner.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^24.0.0"
+  }
+}

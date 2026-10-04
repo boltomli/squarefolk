@@ -8,7 +8,7 @@
 **Squarefolk（方族）** —— 方形四边网格上的轻量回合制 4X，触摸优先、全平台同源。
 开源但**非商业**：CC BY-NC-SA 4.0（见 [LICENSE.md](LICENSE.md)）。
 
-> **当前阶段：M0 · 规格先行。仓库里没有实现代码，只有设计文档、规格骨架与测试向量。**
+> **当前阶段：M0 · 规格先行；Phase 1 已落地 TS 战斗核心与黄金向量 runner（`core/`、`data/balance.json`、`npm test`）。**
 
 ## 必读顺序
 
@@ -50,9 +50,9 @@ docs/
   README.md          文档地图
   design.md          权威设计文档（v0.9，~1000 行）
   core-spec.md       可编码规格（骨架 → 随 M0 填充）
-data/                [规划] 内容与数值 JSON 源（schema 见 design §6）
-testdata/golden/     [规划] 语言无关黄金测试向量
-core/                [规划] 规则核心（语言待定，见 design D13）
+data/                内容与数值 JSON 源（balance.json 等，schema 见 design §6）
+testdata/golden/     语言无关黄金测试向量
+core/                规则核心（Phase 1：TypeScript，规格 = docs/core-spec.md §4.1）
 tools/               [规划] 配置工具 CLI + 桌面编辑器
 ```
 
@@ -60,10 +60,12 @@ tools/               [规划] 配置工具 CLI + 桌面编辑器
 
 ## 常用命令
 
-- **当前（文档阶段）**：无构建命令。自查用：
-  - `grep -rn "TODO\|FIXME\|XXX" docs/`
+- **当前**：
+  - `npm install` —— 安装 devDependencies（typescript、@types/node）
+  - `npm test` —— `tsc` 编译 + 跑 `testdata/golden/combat/` 全部黄金向量（逐条 PASS/FAIL + 汇总，任一失败非零退出）
+  - 自查：`grep -rn "TODO\|FIXME\|XXX" docs/`
   - 改了公式 → 核对 design §3.7 的 8 组标定数值是否仍然自洽
-- **M0 起补充**：测试命令、`validate`、`sim` —— 添加时**必须同步更新本节**（本文件的命令不能过期）。
+- **后续补充**：`validate`、`sim` —— 添加时**必须同步更新本节**（本文件的命令不能过期）。
 
 ## 提交约定
 

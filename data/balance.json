@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "combat": {
+    "damageK": 3,
+    "mReductionPercentPerPoint": 12,
+    "def10PerPoint": 10,
+    "def10Cap": 50,
+    "damageDenominator": 2000,
+    "dyingCounterDivisor": 4,
+    "contentSafetyCap": { "enabled": false, "percent": 85 },
+    "boni": {
+      "terrain_forest": { "def10": 10 },
+      "terrain_mountain": { "def10": 10 },
+      "city": { "def10": 10 },
+      "wall": { "def10": 20 },
+      "stance_defensive": { "def10": 10 },
+      "support_each": { "def10": 5, "defTotalCap": 15 },
+      "flank": { "atk10": 10 },
+      "promotion": { "atk10": 10, "def10": 10 }
+    }
+  }
+}
