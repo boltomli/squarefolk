@@ -1,0 +1,19 @@
+{
+  "id": "combat/boundary/zero-counter",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1.B 反击系数 / design §3.8 医疗",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 0, "def10": 10, "hp": 10, "maxHp": 10, "counter": [0, 1]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 5,
+    "counterDamage": 0,
+    "counterKind": "full",
+    "attackerHpAfter": 10,
+    "defenderHpAfter": 5,
+    "defenderDied": false
+  },
+  "notes": "医疗 counter=[0,1] → 反击分子为 0：20×3×20×88/20000 = 5.28 → 5；counter = 0 但 kind 仍是 full（守方存活 5 血）—— kind 只描述是否垂死"
+}

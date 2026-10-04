@@ -1,0 +1,19 @@
+{
+  "id": "combat/boundary/def-cap",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1.B / §5 边界清单",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 35, "def10": 10, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 15, "def10": 30, "hp": 15, "maxHp": 15, "counter": [1, 1]}, "boni": ["city", "wall", "stance_defensive"] }
+  },
+  "expect": {
+    "damage": 4,
+    "counterDamage": 4,
+    "counterKind": "full",
+    "attackerHpAfter": 6,
+    "defenderHpAfter": 11,
+    "defenderDied": false
+  },
+  "notes": "def10 触顶：30+10(城)+20(墙)+10(姿态) = 70 → 截 50 → M=40；骑士 35×3×30×40/30000 = 4.2 → 4。若实现忘记截断 M=16 → damage 2 —— 本向量即用来区分；守卫反击 15×3×30×88/30000 = 3.96 → 4"
+}

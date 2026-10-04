@@ -1,0 +1,19 @@
+{
+  "id": "combat/boundary/dying-rounds-zero",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1.F / §5 边界清单",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 35, "def10": 10, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 5, "def10": 20, "hp": 5, "maxHp": 10, "counter": [1, 1]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 6,
+    "counterDamage": 0,
+    "counterKind": "dying",
+    "attackerHpAfter": 10,
+    "defenderHpAfter": 0,
+    "defenderDied": true
+  },
+  "notes": "垂死反击取整到 0 的极端：骑士 35×3×15×76/20000 = 5.985 → 6 斩杀；低攻守方垂死反击 5×3×15×88/(2000×10×4) = 19800/80000 = 0.2475 → 0 —— 击杀完全白赚，反击没有 0 保底"
+}

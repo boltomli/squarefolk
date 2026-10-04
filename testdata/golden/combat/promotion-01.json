@@ -1,0 +1,19 @@
+{
+  "id": "combat/promotion-01",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.9 标定（晋升打7挨4）",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": ["promotion"] },
+    "defender": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 7,
+    "counterDamage": 4,
+    "counterKind": "full",
+    "attackerHpAfter": 6,
+    "defenderHpAfter": 3,
+    "defenderDied": false
+  },
+  "notes": "晋升步兵 vs 普通步兵：攻方 atk10 = 20+10 = 30 → 30×3×20×76/20000 = 6.84 → 7；攻方 def10 也 +10 = 30 → 反击 20×3×20×64/20000 = 3.84 → 4 —— 正是 design §3.9 的『打7挨4』；+10 无一项落到血量"
+}
