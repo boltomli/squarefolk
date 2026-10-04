@@ -9,7 +9,11 @@
 
 ## 文档
 
-- **[docs/design.md](docs/design.md)** —— 设计文档 v0.9：基线调研、战斗系统（姿态与先手）、经济与 TTR、地图生成与出生公平、三件套架构、多平台与发行（TapTap 合规矩阵）、授权方案，以及完整的待拍板清单（§9）
+- **[docs/design.md](docs/design.md)** —— 设计文档 v0.9（权威设计：基线调研、战斗/经济/地图、三件套架构、多平台与发行、授权、待拍板清单 §9）
+- **[docs/core-spec.md](docs/core-spec.md)** —— 语言无关的可编码规格（骨架）+ 黄金测试向量格式
+- **[docs/README.md](docs/README.md)** —— 文档地图与按角色阅读路线
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** —— 贡献流程、PR 自检清单、授权声明
+- AGENTS.md —— coding agent 约定与红线（**写入待批准**，见提交说明）
 
 ## 架构：三件套分离
 
