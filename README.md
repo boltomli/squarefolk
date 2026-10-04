@@ -13,7 +13,7 @@
 - **[docs/core-spec.md](docs/core-spec.md)** —— 语言无关的可编码规格（骨架）+ 黄金测试向量格式
 - **[docs/README.md](docs/README.md)** —— 文档地图与按角色阅读路线
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** —— 贡献流程、PR 自检清单、授权声明
-- AGENTS.md —— coding agent 约定与红线（**写入待批准**，见提交说明）
+- **[AGENTS.md](AGENTS.md)** —— coding agent 约定与红线（必读顺序、5 条硬红线、完成定义、目录与提交约定）
 
 ## 架构：三件套分离
 
