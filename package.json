@@ -6,7 +6,7 @@
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "tsc -p tsconfig.json && node dist/core/test/combat-vector-runner.js"
+    "test": "tsc -p tsconfig.json && node dist/core/test/combat-vector-runner.js && node dist/core/test/meta-vector-runner.js && node dist/core/test/unit-assertions.js"
   },
   "devDependencies": {
     "typescript": "^5.9.0",

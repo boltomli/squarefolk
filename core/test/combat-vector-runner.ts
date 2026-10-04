@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { resolveCombat, type Combatant } from '../src/combat';
+import { collectVectorFiles } from './collect-vectors';
 
 interface GoldenVector {
   id?: string;
@@ -21,14 +22,6 @@ interface GoldenVector {
 }
 
 const VECTORS_DIR = path.resolve(__dirname, '../../../testdata/golden/combat');
-
-function collectVectorFiles(dir: string): string[] {
-  const names = fs.readdirSync(dir, { recursive: true }) as string[];
-  return names
-    .filter((name) => name.endsWith('.json') && !path.basename(name).startsWith('.'))
-    .map((name) => path.join(dir, name))
-    .sort();
-}
 
 let pass = 0;
 let fail = 0;
