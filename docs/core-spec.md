@@ -55,7 +55,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 | action | payload | 附加谓词与后效 |
 | --- | --- | --- |
 | `move` | `unitId, x, y` | `!moved && !healed`；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）→ 落地后 `moved = true` |
-| `attack` | `unitId, target(unitId \| cityId)` | `!attacked && !healed`；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E） |
+| `attack` | `unitId, target(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove || !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E） |
 | `train` | `cityId, type` | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`type` 已解锁；`stars ≥ cost(type)`；城上格为空（T2） |
 | `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（T1）；科技已解锁 → 资源移除，按 data 给人口或星星 |
 | `build` | `unitId, kind` | 目标格在**己方领土**（T1）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
@@ -180,9 +180,15 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 垂死反击取整可能为 0 或 1；`def10_eff` 触顶截断；同归于尽（双方同回合致死 —— 仅可能出现在序列入口）；近战补位受阻；`counter = 0` 单位。
 
-#### G. 🔶 开放问题（未拍板前不实现相关分支）
+#### G. 开放问题与已拍板项
 
-1. **投石类"移动后不可攻击"（原作 Stiff）**：建议 = 单位数据字段 `canAttackAfterMove`（近战 true / 投石 false），需在 design §3.8 单位表补列 —— v1 可先全 true 简化，但这是**数值敏感项**（影响投石强度），需拍板。
+1. ✅ **T6 已拍板：攻城器械移动后不可攻击**（2026-10-03："投石移动后当然不能攻击"）。
+   **实际情境 → 规则抽象**：投石机这类重器械**转移阵地后要重新架设**才能开火；步、骑、轻抛射（弓/斧）走打一体 —— 这是**武器系统的固有属性**，不是兵种强弱调整。抽象为单位数据字段：
+   - `canAttackAfterMove: bool` —— 走打一体 `true`（默认）；**架设型 `false`（投石）**；在 `units.json` 按单位类型标注，**不进状态机**
+   - 谓词落点（§2 `attack`）：`unit.canAttackAfterMove || !unit.moved`
+   - 架设型单位移动后：不能攻击、也不能治疗（治疗本就要求 `!moved`）→ 本回合自然结束，与基线 Stiff 语义一致
+   - "攻击后能否移动"已由 §4.1-E（攻击即结束回合）覆盖，**不另开字段**
+   - 将来加攻城锤/重炮等，按同一属性归类即可，**不新增规则分支**
 2. 多回合推演结论（如 §3.7 行 2"先攻方阵亡"）**不属于单次交战向量**，由序列入口 / `sim` 验证。
 
 ### 4.2 移动与 ZOC（展开）
@@ -402,4 +408,4 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 | T3 地图生成算法规格 | spec | 🔶 design §2.6 只定了流程与挑选；地形合成算法单独规格后，`world/gen-*` 才可做跨实现断言 |
 | T4 淘汰玩家残余单位 | spec | 🔶 建议随帝国一并消灭（与基线一致性待核） |
 | T5 分数公式与同分 tie-break | spec | 🔶 积分模式与首接触奖励（3–12★）都依赖它 |
-| T6 投石 `canAttackAfterMove` | spec | 🔶 §4.1-G，数值敏感需拍板（建议：近战 true / 投石 false） |
+| T6 投石 `canAttackAfterMove` | spec | ✅ **已拍板**：架设型（投石）移动后不可攻击 —— 字段默认 `true`、投石 `false`（§4.1-G） |
