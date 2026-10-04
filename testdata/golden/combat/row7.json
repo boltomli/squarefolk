@@ -1,0 +1,19 @@
+{
+  "id": "combat/calibration/row7",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.7 行7",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 50, "def10": 40, "hp": 40, "maxHp": 40, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 11,
+    "counterDamage": 1,
+    "counterKind": "dying",
+    "attackerHpAfter": 39,
+    "defenderHpAfter": 0,
+    "defenderDied": true
+  },
+  "notes": "巨人斩步兵：50×3×20×76/20000 = 11.4 → 11（与基线一致的高攻秒杀）；步兵垂死反击 20×3×20×52/(2000×10×4) = 0.78 → 1 —— 处决成本 ≈ 1 点"
+}

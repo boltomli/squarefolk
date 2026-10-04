@@ -1,0 +1,19 @@
+{
+  "id": "combat/calibration/row4",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.7 行4",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 25, "def10": 10, "hp": 10, "maxHp": 10, "counter": [1, 2]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 5,
+    "counterDamage": 3,
+    "counterKind": "full",
+    "attackerHpAfter": 7,
+    "defenderHpAfter": 5,
+    "defenderDied": false
+  },
+  "notes": "步兵贴弓手：弓手防 1 → M=88，20×3×20×88/20000 = 5.28 → 5；弓手反击 25×3×20×76/(20000×2) = 2.85 → 3 —— 远程被贴吃亏大、反击弱，纯数值表达无特殊规则（C5）"
+}

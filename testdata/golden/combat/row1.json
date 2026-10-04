@@ -1,0 +1,19 @@
+{
+  "id": "combat/calibration/row1",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.7 行1",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 5,
+    "counterDamage": 5,
+    "counterKind": "full",
+    "attackerHpAfter": 5,
+    "defenderHpAfter": 5,
+    "defenderDied": false
+  },
+  "notes": "步兵 vs 步兵（守方非防御姿态、平原）：防 2 → 24% 减伤；验算 20×3×20×76/20000 = 4.56 → 5。先手优势的基础交换"
+}

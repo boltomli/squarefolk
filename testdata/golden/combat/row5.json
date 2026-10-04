@@ -1,0 +1,19 @@
+{
+  "id": "combat/calibration/row5",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.7 行5",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 35, "def10": 10, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 35, "def10": 10, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] }
+  },
+  "expect": {
+    "damage": 9,
+    "counterDamage": 9,
+    "counterKind": "full",
+    "attackerHpAfter": 1,
+    "defenderHpAfter": 1,
+    "defenderDied": false
+  },
+  "notes": "骑士互砍：35×3×20×88/20000 = 9.24 → 9 —— 同级不可互秒（基线为 14 一击毙命，修 P2）；双方均剩 1 血"
+}

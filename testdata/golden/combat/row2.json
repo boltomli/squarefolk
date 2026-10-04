@@ -1,0 +1,19 @@
+{
+  "id": "combat/calibration/row2",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.7 行2",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 20, "def10": 20, "hp": 10, "maxHp": 10, "counter": [1, 1]}, "boni": ["stance_defensive"] }
+  },
+  "expect": {
+    "damage": 4,
+    "counterDamage": 5,
+    "counterKind": "full",
+    "attackerHpAfter": 5,
+    "defenderHpAfter": 6,
+    "defenderDied": false
+  },
+  "notes": "步兵 vs 防御姿态步兵：def10 = 20+10 = 30 → M=64；20×3×20×64/20000 = 3.84 → 4，反击仍 4.56 → 5 —— 单次交换守方占优（多回合推演的'先攻方阵亡'属序列入口向量）"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "combat/calibration/row8",
+  "rulesVersion": "0.1.0",
+  "source": "design.md §3.7 行8",
+  "given": {
+    "fixture": "combat1v1",
+    "attacker": { "base": {"atk10": 30, "def10": 30, "hp": 15, "maxHp": 15, "counter": [1, 1]}, "boni": [] },
+    "defender": { "base": {"atk10": 15, "def10": 30, "hp": 15, "maxHp": 15, "counter": [1, 1]}, "boni": ["city", "stance_defensive"] }
+  },
+  "expect": {
+    "damage": 4,
+    "counterDamage": 3,
+    "counterKind": "full",
+    "attackerHpAfter": 12,
+    "defenderHpAfter": 11,
+    "defenderDied": false
+  },
+  "notes": "剑士攻城内守卫：def10 = 30+10+10 = 50（触顶）→ M=40，30×3×30×40/(2000×15) = 3.6 → 4；守卫反击 15×3×30×64/(2000×15) = 2.88 → 3 —— 满配城防把 6 降到 4，但围城破墙后加成全失"
+}
