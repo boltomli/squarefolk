@@ -44,9 +44,9 @@
 
 **不变量**（每动作后必须成立，测试断言用）：`0 ≤ hp ≤ maxHp(type)`；每格 ≤1 单位；`cityId` 全局唯一；`stars ≥ 0`；`level ≥ 1`；`population ≥ 0`；`hasWall ⇔ wallDurability ∈ 1..3`；`eliminated ⇔ 无城市`。
 
-**衍生量不入状态**（一律现算）：`besieged`、防御姿态、可达集、视野三态、领地（T1 未定）。
+**衍生量不入状态**（一律现算）：`besieged`、防御姿态、可达集、视野三态、领地（§4.3）。
 
-> 尚未覆盖的字段见附录 T1–T6；**未定前不实现相关分支**。
+> 未定项索引见附录（T1 / T6 已关，剩 T2–T5 与 T1a）；**未定前不实现相关分支**。
 
 ## 2. 动作类型 `Action`（校验谓词 = `legalActions` 唯一来源）
 
@@ -57,8 +57,8 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 | `move` | `unitId, x, y` | `!moved && !healed`；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）→ 落地后 `moved = true` |
 | `attack` | `unitId, target(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove || !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E） |
 | `train` | `cityId, type` | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`type` 已解锁；`stars ≥ cost(type)`；城上格为空（T2） |
-| `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（T1）；科技已解锁 → 资源移除，按 data 给人口或星星 |
-| `build` | `unitId, kind` | 目标格在**己方领土**（T1）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
+| `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（§4.3 领地）；科技已解锁 → 资源移除，按 data 给人口或星星 |
+| `build` | `unitId, kind` | 目标格在**己方领土**（§4.3 领地；**道路例外**：中立地可修、敌方领土不可）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
 | `research` | `techId` | 未研究、前置已满足、`stars ≥ cost`（§4.3 公式） |
 | `upgradeCity` | `cityId, choice` | 属本方；`population ≥ level+1` 的当级需求；`wall` 需 `!hasWall` → 消耗人口 `level+1`，等级 +1，按 choice 落地 |
 | `heal` | `unitId` | `!moved && !attacked && !healed && hp < maxHp` → `hp += (本土 ? 4 : 2)`（上限截断），`healed = true`（**不破坏防御姿态**） |
@@ -245,7 +245,17 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - `cost = tier × 城市数 + 4`（城市数 = 当前拥有数，动作时刻计算）
 - 三层前置：T1 无前置；T2/T3 需同分支前序（data 定义，`validate` 查环）
 
-**依赖 T1 领地模型**：`harvest` / `build` 的"己方领土"谓词 —— 见附录。
+**领地模型（T1 已拍板 —— 方案 C：动态扩边）**
+
+- **半径**：`radius(city) = ceil(level ÷ 2)` —— L1–2 → 3×3，L3–4 → 5×5，L5–6 → 7×7…，随升级每 2 级扩一圈。实现从 `balance.json` 的 `borderRadiusByLevel` 表按级取值（公式只是默认，逐级可改）
+- **暂不加上限**（用户："也许加点限制但以后再说" → 附录登记 **T1a**；将来加限制只动上限规则，不动谓词）
+- **归属**：每个格子归**最近的城市**（与城市阵营无关地比较；距离并列 → `city id` 小者胜）；格子在**其归属城市**半径内 → 属该城所有者的领土
+  - 双方城市挤压、双城重叠、地图边缘 —— 全部被这一条天然处理，**不另写避让规则**
+- `territory(玩家)` = 归属筛选后的己方城市半径格并集 —— **衍生量**：不入状态，每动作后重算；城市易手/升级 → 领地自动跟着变
+- **道路例外（沿基线）**：`build kind=road` 不受领土约束 —— **中立地表可修**（敌方领土不可），山地 / 水域不可修；否则早期两城隔着地修不了路，连接体系出不来
+- **谓词落点**：`build`（道路除外）、`harvest` → 目标格 ∈ `territory(我)`；**敌方领土内不可建、不可采**（基线一致）
+- **视野不随领地变**：§4.5 是视野源制（单位 1 / 山地与城市 2），与基线"领地扩视野"不同 —— 已有意维持差异
+- 状态级向量 `turn/territory-*`（重叠归属、随级扩圈、道路例外、易手收缩）待 §1 状态模型实装后补
 
 ### 4.4 围城与占领（公共框架；🔶 D6 分支未定）
 
@@ -403,7 +413,8 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 | 围城破城机制 + 攻城削耐久参数 | D6 | 🔶 未定 —— §4.4 公共框架已写；**勿实现破城分支** |
 | 联机回合模型 | D3 | 🔶 M2 前 |
 | 标定常数调参 | D10 | ⏸ M0 回归后 |
-| T1 领地 / 边界扩张模型 | spec | 🔶 design 未覆盖 —— `build` / `harvest` 谓词依赖它；建议沿用基线"人口增长自动扩边" |
+| T1 领地 / 边界扩张模型 | spec | ✅ **已拍板（方案 C · 动态）**：半径随等级 `ceil(level/2)` + 最近城市归属 + 道路可修中立地（§4.3） |
+| T1a 扩边限制（半径上限 / 增速） | spec | ⏸ 用户："也许加点限制但以后再说" —— 到时只改上限规则与 `borderRadiusByLevel`，**不动谓词** |
 | T2 训练占格与强制推挤 | spec | 🔶 design 未覆盖 —— v1 建议"城上格被占不可训练"，推挤机制后置 |
 | T3 地图生成算法规格 | spec | 🔶 design §2.6 只定了流程与挑选；地形合成算法单独规格后，`world/gen-*` 才可做跨实现断言 |
 | T4 淘汰玩家残余单位 | spec | 🔶 建议随帝国一并消灭（与基线一致性待核） |

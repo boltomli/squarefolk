@@ -18,6 +18,7 @@
 | v0.9 | **定名 Squarefolk（方族）**：Tessera / Quadratum / Gridholm 等撞名候选排除后选定，`Squarefolk` 检索无同名游戏或产品；创建仓库 `~/disk/songl/squarefolk/` 并 `git init`；D7 更新 |
 | v0.10 | PRNG/哈希定案回填（splitmix64 / FNV-1a 64 → core-spec §0，军规 2 措辞同步）；同日 core-spec §0–§4.7 全量冻结、补漏 `train` 动作、登记 T1–T6、12 条黄金向量独立验算通过 |
 | v0.11 | **T6 拍板**：架设型单位（投石）移动后不可攻击 —— 抽象为单位字段 `canAttackAfterMove`（默认 true、投石 false，`units.json` 标注），core-spec §2 谓词 / §4.1-G / 附录同步。另核对基线：城市默认领地 3×3、L4 升级可选一次扩为 5×5、道路可修于中立地（为 T1 铺路） |
+| v0.12 | **T1 拍板（方案 C · 动态扩边）**：领地半径随城市等级（默认 `ceil(level/2)`，逐级值进 balance 的 `borderRadiusByLevel`）、归属 = 最近城市胜出、道路可修于中立地；扩边限制暂不加（T1a 后置）。core-spec §4.3 领地小节、§1/§2 谓词、附录同步 |
 
 ---
 
