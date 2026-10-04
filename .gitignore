@@ -1,0 +1,26 @@
+# macOS / Windows
+.DS_Store
+._*
+Thumbs.db
+
+# 密钥与本地环境（发布签名严禁入库，见 design.md §5.9）
+.env
+*.keystore
+*.p12
+export_presets.cfg
+
+# 构建产物
+data/packs/
+build/
+dist/
+target/
+.godot/
+node_modules/
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
+
+# 日志
+*.log
