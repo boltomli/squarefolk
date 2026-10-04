@@ -211,7 +211,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - 以 `budget2` 为预算做 Dijkstra，权重 `cost2 ∈ {1, 2, 3}`，松弛前检查进入判定
 - 优先队列排序键 `(dist, y, x)`；邻接枚举顺序固定 `N, NE, E, SE, S, SW, W, NW`
 - 可达上界 `dist ≤ budget2 + 1`（判定式允许的超支 ≤ 1 半点）
-- 过滤：目标无单位、非 `hidden` 迷雾（`explored` 暗区可进）
+- 过滤：目的地与**路径经过格**均须无单位（占位即阻断、**不可穿越**）、非 `hidden` 迷雾（`explored` 暗区可进）
 - 输出 `reachable[]` 按 `(y, x)` 排序 —— UI、bot、联机校验同源
 
 **进入即结算**：中立村庄 → 占领（新城市 `level=1, population=0` + 一次性奖励按 data），单位停留于该村格。
@@ -384,6 +384,35 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - `boni` 直接列出 core-spec §4.1-B 的加成枚举（姿态 = `stance_defensive`、夹击 = `flank`）—— **夹具跳过姿态判定逻辑**，判定属于状态级向量。
 - HP 语义：`hpAfter = max(0, hp − damage)`（伤害可溢出，HP 不为负）。
 - `expect` 字段全集：`damage`、`counterDamage`、`counterKind`（`full` | `dying`）、`attackerHpAfter`、`defenderHpAfter`、`defenderDied`，以及可选的 `killSwapApplied`、`promotionApplied`；state 型可另含 `hash`（规范化序列化后的完整状态）。
+
+#### map 型 given（移动 / 视野 / 领地共用底座）
+
+```json
+{
+  "given": {
+    "fixture": "moveReachable",
+    "map": {
+      "h": 1, "w": 3,
+      "terrain": ["..."],
+      "roads": [[0, 1]],
+      "cities": [],
+      "explored": []
+    },
+    "units": [
+      { "id": "u1", "owner": "A", "x": 0, "y": 0, "move": 1 }
+    ]
+  },
+  "expect": { "dest": [[0, 1], [0, 2]] }
+}
+```
+
+- **坐标**：`units[].x/y` 为列 / 行；`roads`、`cities`、`explored` 与 `expect` 一律 **`[y, x]`**（行主序）
+- `terrain`：每行一个字符串，图例 `.`平原 `f`森林 `m`山地 `s`沼泽 `w`水域（v1 陆地单位不可通行）
+- `roads` / `cities` **叠加**在地形之上：路格 cost 1（森林+路 = 可穿过、cost 1）；城 / 村格 cost 1（占领属 `turn/*`，移动向量只测通行）
+- `explored` 缺省 = **全图已探索**；显式给出时其外即 `hidden`（§4.5 三态里移动只区分这两态）
+- `units[].move` 为整点移动力（`budget2 = move × 2`）；`owner` 不同 = 敌方（ZOC 与占位判定）
+- **`units[0]` = 发起移动的单位**（夹具约定；其余单位为占位 / ZOC 源）
+- `expect.dest` = 合法目的地集合（**不含出发格**），按 `[y, x]` 字典序；`fixture` 名 `moveReachable` / 后续 `visionVisible` / `territoryGrid`
 
 ### 6.2 向量纪律
 

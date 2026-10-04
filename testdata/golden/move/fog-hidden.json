@@ -1,0 +1,12 @@
+{
+  "id": "move/fog-hidden",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.2 过滤（hidden 不可进、explored 可进）",
+  "given": {
+    "fixture": "moveReachable",
+    "map": { "h": 1, "w": 4, "terrain": ["...."], "roads": [], "cities": [], "explored": [[0, 0], [0, 1]] },
+    "units": [ { "id": "u1", "owner": "A", "x": 0, "y": 0, "move": 3 } ]
+  },
+  "expect": { "dest": [[0, 1]] },
+  "notes": "budget2=6 充裕，但 (0,2)/(0,3) 为 hidden → 被目的地过滤掉；explored 暗区 (0,1) 可进。若漏迷雾过滤，(0,2) 会以 dist4 出现（(0,3) 因非 (0,1) 邻接本就不达）—— 本向量即区分"
+}

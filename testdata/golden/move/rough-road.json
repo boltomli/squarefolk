@@ -1,0 +1,12 @@
+{
+  "id": "move/rough-road",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.2 停止规则 2（粗地形可进不可穿、道路豁免）",
+  "given": {
+    "fixture": "moveReachable",
+    "map": { "h": 1, "w": 4, "terrain": ["..ff"], "roads": [[0, 2]], "cities": [], "explored": [] },
+    "units": [ { "id": "u1", "owner": "A", "x": 0, "y": 0, "move": 2 } ]
+  },
+  "expect": { "dest": [[0, 1], [0, 2], [0, 3]] },
+  "notes": "森林+路 = 可穿过（cost1）：2→(0,1)平原 cost2 余2 → (0,2)路 cost1 余1 → (0,3)无路森林 cost2，ceil(1)=2≥2 可进、dist=5=budget2+1 边界；(0,3) 粗地形进入即停（图末，停不停都到头，真正区分点是 (0,3) 可达 —— 若把带路森林当停点，(0,3) 消失）"
+}

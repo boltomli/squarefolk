@@ -1,0 +1,15 @@
+{
+  "id": "move/occupancy-city",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.2 过滤（占位阻断）+ 城市 cost1",
+  "given": {
+    "fixture": "moveReachable",
+    "map": { "h": 2, "w": 2, "terrain": ["..", ".."], "roads": [], "cities": [[1, 0]], "explored": [] },
+    "units": [
+      { "id": "u1", "owner": "A", "x": 0, "y": 0, "move": 1 },
+      { "id": "u2", "owner": "A", "x": 1, "y": 0, "move": 1 }
+    ]
+  },
+  "expect": { "dest": [[1, 0], [1, 1]] },
+  "notes": "友军占位格 (y0,x1) 不可作目的地亦不可穿越；城市格 (y1,x0) cost1 → budget2=2 下余 1 半点，可从城格继续扩张（本图 (y1,x1) 已由原点对角直达，城格扩张无新增 —— 占位过滤是本向量主断言）"
+}
