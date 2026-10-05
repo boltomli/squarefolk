@@ -13,8 +13,8 @@
     "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
     "techs": {}, "resources": {},
     "currentPlayer": "A", "turn": 0, "phase": "act",
-    "action": { "type": "train", "cityId": "city.000001", "type": "unit.warrior" }
+    "action": { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" }
   },
   "expect": { "rejected": true },
-  "notes": "容量满拒绝：城 L1 容量 1，homeCity=c1 的驻留数已 1 → 1 < 1 为假 → 拒绝，状态零变化（expect 仅 rejected，其余不校验）"
+  "notes": "容量满拒绝：城 L1 容量 1，homeCity=c1 的驻留数已 1 → 1 < 1 为假 → 拒绝，状态零变化（expect 仅 rejected，其余不校验）。载荷键 2026-10-05 由 type 改名 unitType（与判别键避撞）"
 }

@@ -13,7 +13,7 @@
     "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
     "techs": {}, "resources": {},
     "currentPlayer": "A", "turn": 0, "phase": "act",
-    "action": { "type": "train", "cityId": "city.000001", "type": "unit.warrior" }
+    "action": { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" }
   },
   "expect": {
     "rejected": false,
@@ -23,5 +23,5 @@
     ],
     "players": [ { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false } ]
   },
-  "notes": "造兵：城 L2 容量 2、现驻 1 ✓；城上格空 ✓；stars 5 ≥ 3 ✓ → 新单位 unit.000002 出生在城格 (0,0)、属性取自 unitTypes、homeCity=c1、全旗 false（天然防御姿态）；stars 5−3=2"
+  "notes": "造兵：城 L2 容量 2、现驻 1 ✓；城上格空 ✓；stars 5 ≥ 3 ✓ → 新单位 unit.000002 出生在城格 (0,0)、属性取自 unitTypes、homeCity=c1、全旗 false（天然防御姿态）；stars 5−3=2。载荷键 2026-10-05 由 type 改名 unitType（与判别键避撞）"
 }

@@ -125,10 +125,9 @@ function assemble(vector: TurnVector): Assembled {
   for (const [y, x] of given.map.villages ?? []) villageCells.add(y * w + x);
   const resourceAt = new Map<number, string>();
   for (const entry of given.map.resources ?? []) {
-    // 坐标序（规格层发现，已报告）：§6 行 461 未定义 resources 三元组顺序，harvest-pop 向量强制
-    // 列先行 [x, y, kind] —— 单位 x=1/y=0 必须站在资源格上（§2 harvest「单位所在格」）才可能 rejected:false。
-    const [cx, cy, kind] = entry as [number, number, string];
-    resourceAt.set(cy * w + cx, kind);
+    // 坐标序：§6 已定 resources 三元组 = [y, x, kind]（行主序，2026-10-05 规格澄清；输出侧本就 [y,x,kind]）
+    const [ry, rx, kind] = entry as [number, number, string];
+    resourceAt.set(ry * w + rx, kind);
   }
   const cityAt = new Map<number, string>();
   for (const city of given.cities) cityAt.set(city.y * w + city.x, city.id);
@@ -236,10 +235,9 @@ function assemble(vector: TurnVector): Assembled {
 }
 
 /**
- * §6 action 型夹具（行 461）：动作对象扁平、判别键 `type` 平铺于载荷。§2 行 61 train 载荷键也是
- * `type` → 夹具以重复键表达（train-ok.json 行 16、train-capacity-rejected.json 行 16），JSON.parse
- * 后写覆盖前写会把动作类型吞成 "unit.warrior"。按原文本扫描恢复：首个 `type` = 动作类型（§6），
- * 重复 `type` = §2 载荷兵种 → 映射到 Action.unitType。规格层发现已报告（docs / testdata 本轮禁改）。
+ * §6 action 型夹具：动作对象扁平、判别键 `type` 平铺于载荷。train 载荷兵种键已按规格修正为
+ * `unitType`（2026-10-05，与判别键避撞 —— 原 `type` 重复键会让 JSON.parse 后写覆盖前写）。
+ * 本函数仍按原文本逐字段扫描：首个 `type` = 动作类型，其余键平铺进载荷（`unitType` 直通）。
  */
 function parseAction(raw: string): Action {
   const match = raw.match(/"action"\s*:\s*\{([^}]*)\}/);

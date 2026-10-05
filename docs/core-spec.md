@@ -56,9 +56,9 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 
 | action | payload | 附加谓词与后效 |
 | --- | --- | --- |
-| `move` | `unitId, x, y` | `!moved && !attacked && !healed`；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）→ 落地后 `moved = true` |
+| `move` | `unitId, x, y` | `!moved && (!attacked || unit.canMoveAfterAttack) && !healed`（技能字段默认 false = 现行"攻击即结束回合"，design v0.14）；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）→ 落地后 `moved = true` |
 | `attack` | `unitId, target(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove || !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E） |
-| `train` | `cityId, type` | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`type` 已解锁；`stars ≥ cost(type)`；城上格为空（T2） |
+| `train` | `cityId, unitType`（载荷键 **`unitType`** —— 与 §6 判别键 `type` 避撞，2026-10-05 修正） | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`unitType` 已解锁；`stars ≥ cost(unitType)`；城上格为空（T2） |
 | `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（§4.3 领地）；科技已解锁 → 资源移除，按 data 给人口或星星 |
 | `build` | `unitId, kind` | 目标格在**己方领土**（§4.3 领地；**道路例外**：中立地可修、敌方领土不可）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
 | `research` | `techId` | 未研究、前置已满足、`stars ≥ cost`（§4.3 公式） |
@@ -410,7 +410,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 }
 ```
 
-- **坐标**：`units[].x/y` 为列 / 行；`roads`、`cities`、`explored` 与 `expect` 一律 **`[y, x]`**（行主序）
+- **坐标**：`units[].x/y` 为列 / 行；`roads`、`cities`、`resources`（三元组 **`[y, x, kind]`**）、`explored` 与 `expect` 一律 **`[y, x]`**（行主序）
 - `terrain`：每行一个字符串，图例 `.`平原 `f`森林 `m`山地 `s`沼泽 `w`水域（v1 陆地单位不可通行）
 - `roads` / `cities` **叠加**在地形之上：路格 cost 1（森林+路 = 可穿过、cost 1）；城 / 村格 cost 1（占领属 `turn/*`，移动向量只测通行）；**叠加不改水域** —— 水不可入无条件优先（v1 无海军，路也修不到水上 §4.3）
 - `explored` **缺省或空数组 `[]` = 全图已探索**；**非空**时其外即 `hidden`（§4.5 三态里移动只区分这两态）
