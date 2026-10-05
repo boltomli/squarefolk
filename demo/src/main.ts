@@ -8,10 +8,10 @@
  */
 import { applyAction, terrainLegendFromId, type Action } from '../../core/src/actions';
 import { reachable, type Coord, type MapFixture } from '../../core/src/movement';
-import { resolveBorderRadius, territoryGrid, type TerritoryCity } from '../../core/src/territory';
+import { resolveBorderRadius, owningCity, territoryGrid, type TerritoryCity } from '../../core/src/territory';
 import { viewFor, visibleCellsFor, type ViewTile } from '../../core/src/vision';
 import type { State } from '../../core/src/state';
-import { CONTENT, RESOURCE_LABELS, TECH_LABELS, TECH_ORDER, UNIT_LABELS, UNIT_TYPE_ORDER } from './config';
+import { CITY_PALETTE, CONTENT, RESOURCE_LABELS, TECH_LABELS, TECH_ORDER, UNIT_LABELS, UNIT_TYPE_ORDER } from './config';
 import { MAP_H, MAP_W, PLAYER_IDX, VILLAGE_TOTAL, createInitialState } from './map';
 import { mount, render, type CellModel, type Handlers, type ViewModel } from './ui';
 
@@ -30,6 +30,12 @@ interface Session {
   status: string;
   celebrated: boolean;
   overlay: boolean;
+  /** 己方城市配色/徽记（表现层，按首次出现顺序取 CITY_PALETTE 槽位，不入 State） */
+  cityStyle: Map<string, { color: string; tag: string }>;
+  /** 已配过色的城市 id（首见即占槽，后续不移位） */
+  seenCities: Set<string>;
+  /** 本回合新占领的城市（结束回合清空 → 表现层「新」标记） */
+  newCities: Set<string>;
 }
 
 const session: Session = {
@@ -42,7 +48,32 @@ const session: Session = {
   status: '点击己方单位或首都开始',
   celebrated: false,
   overlay: false,
+  cityStyle: new Map<string, { color: string; tag: string }>(),
+  seenCities: new Set<string>(),
+  newCities: new Set<string>(),
 };
+
+/**
+ * 己方城市配色同步（表现层状态）：新城市首见取下一槽位；`markNew=true` 时标记「本回合新占领」。
+ * boot 时用 false → 首都不算新占。
+ */
+function syncCityStyles(markNew: boolean): void {
+  const owned = session.state.cities
+    .filter((city) => city.owner === PLAYER_IDX)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const city of owned) {
+    if (!session.cityStyle.has(city.id)) {
+      session.cityStyle.set(city.id, CITY_PALETTE[session.cityStyle.size % CITY_PALETTE.length]);
+    }
+    if (session.seenCities.has(city.id)) continue;
+    session.seenCities.add(city.id);
+    if (markNew) session.newCities.add(city.id);
+  }
+}
+
+function cityStyle(cityId: string): { color: string; tag: string } {
+  return session.cityStyle.get(cityId) ?? { color: '#9aa2bd', tag: '?' };
+}
 
 function exploredList(): number[][] {
   return [...session.explored].sort((a, b) => a - b).map((key) => [Math.floor(key / MAP_W), key % MAP_W]);
@@ -63,20 +94,27 @@ function refreshView(): void {
   });
 }
 
-function territoryKeys(state: State): Set<number> {
-  const cities: TerritoryCity[] = state.cities.map((city) => ({
+function territoryCities(state: State): TerritoryCity[] {
+  return state.cities.map((city) => ({
     id: city.id,
     x: city.x,
     y: city.y,
     owner: String(city.owner),
     radius: resolveBorderRadius(city.level),
   }));
-  const keys = new Set<number>();
-  for (const [owner, cells] of Object.entries(territoryGrid(MAP_H, MAP_W, cities))) {
-    if (owner !== String(PLAYER_IDX)) continue;
-    for (const [y, x] of cells) keys.add(y * MAP_W + x);
+}
+
+/** 己方领土格 → 归属城市配色（core territoryGrid 定归属、owningCity 定到城；仅 presentation） */
+function territoryColors(state: State): Map<number, string> {
+  const cities = territoryCities(state);
+  const ownedCells = territoryGrid(MAP_H, MAP_W, cities)[String(PLAYER_IDX)] ?? [];
+  const colors = new Map<number, string>();
+  for (const [y, x] of ownedCells) {
+    const owning = owningCity(cities, x, y);
+    if (owning === null) continue;
+    colors.set(y * MAP_W + x, cityStyle(owning.id).color);
   }
-  return keys;
+  return colors;
 }
 
 /** State → §6 map 型夹具（reachable 的输入；explored 参与 §4.2「非 hidden」过滤） */
@@ -150,8 +188,18 @@ function submit(action: Action): State | null {
   }
   session.state = result.state;
   refreshView();
+  syncCityStyles(true);
   checkCompletion();
   return result.state;
+}
+
+/**
+ * 只读探针：applyAction 内部先 structuredClone 再写（actions.ts §2 管线），故探测不改 session.state；
+ * 探测通过 → 后继态丢弃（面板只用拒绝原因，动作仍由用户点击触发）。
+ */
+function probeRejected(action: Action): string | null {
+  const result = applyAction(session.state, action, CONTENT, { explored: exploredList() });
+  return result.rejected ? result.reason : null;
 }
 
 function checkCompletion(): void {
@@ -228,6 +276,7 @@ const handlers: Handlers = {
       return;
     }
     clearSelection();
+    session.newCities.clear(); // 新占领标记只保留到本回合结束（表现层）
     session.status = `回合 ${session.state.turn}：⭐ ${before} → ${stars()}`;
     renderNow();
   },
@@ -281,7 +330,7 @@ const handlers: Handlers = {
 function buildModel(): ViewModel {
   const state = session.state;
   const player = state.players[PLAYER_IDX];
-  const territory = territoryKeys(state);
+  const territory = territoryColors(state);
   const reachableKeys = new Set(session.reachableCells.map((cell) => cell.y * MAP_W + cell.x));
   const selectedUnit = unitById(session.selectedUnitId);
 
@@ -292,6 +341,10 @@ function buildModel(): ViewModel {
     const unit = state.units.find((other) => other.x === x && other.y === y);
     const cityId = viewCell.building?.cityId ?? null;
     const city = cityId === null ? undefined : state.cities.find((entry) => entry.id === cityId);
+    const cityMine = city !== undefined && city.owner === PLAYER_IDX && viewCell.visibility !== 'hidden';
+    const home = unit?.homeCity ?? null;
+    const homeStyle = home === null ? null : session.cityStyle.get(home) ?? null;
+    const inTerritory = territory.has(index) && viewCell.visibility !== 'hidden';
     return {
       x,
       y,
@@ -300,11 +353,21 @@ function buildModel(): ViewModel {
       resource: viewCell.resource ?? null,
       village: tile.village && viewCell.visibility !== 'hidden',
       city: city === undefined ? null : city.isCapital ? 'capital' : 'city',
+      cityColor: cityMine ? cityStyle(city.id).color : null,
+      cityNew: cityMine && session.newCities.has(city.id),
       unit:
         unit === undefined
           ? null
-          : { id: unit.id, type: unit.type, hp: unit.hp, acted: unit.moved || unit.attacked || unit.healed },
-      inTerritory: territory.has(index),
+          : {
+              id: unit.id,
+              type: unit.type,
+              hp: unit.hp,
+              acted: unit.moved || unit.attacked || unit.healed,
+              homeTag: homeStyle?.tag ?? null,
+              homeColor: homeStyle?.color ?? null,
+            },
+      inTerritory,
+      territoryColor: inTerritory ? territory.get(index) ?? null : null,
       reachable: reachableKeys.has(index),
       selected: unit !== undefined && unit.id === session.selectedUnitId,
     };
@@ -323,17 +386,32 @@ function buildModel(): ViewModel {
     unit:
       selectedUnit === undefined
         ? null
-        : {
-            id: selectedUnit.id,
-            label: UNIT_LABELS[selectedUnit.type] ?? selectedUnit.type,
-            hp: selectedUnit.hp,
-            maxHp: CONTENT.unitTypes[selectedUnit.type].hp,
-            moved: selectedUnit.moved,
-            attacked: selectedUnit.attacked,
-            healed: selectedUnit.healed,
-            onResource: state.tiles[selectedUnit.y][selectedUnit.x].resource ?? null,
-            onOwnCity: ownCityAt(selectedUnit.x, selectedUnit.y) !== undefined,
-          },
+        : (() => {
+            const onResource = state.tiles[selectedUnit.y][selectedUnit.x].resource ?? null;
+            const home = selectedUnit.homeCity;
+            const homeCity = home === null ? undefined : state.cities.find((entry) => entry.id === home);
+            const homeTag = home === null ? null : session.cityStyle.get(home)?.tag ?? null;
+            return {
+              id: selectedUnit.id,
+              label: UNIT_LABELS[selectedUnit.type] ?? selectedUnit.type,
+              hp: selectedUnit.hp,
+              maxHp: CONTENT.unitTypes[selectedUnit.type].hp,
+              moved: selectedUnit.moved,
+              attacked: selectedUnit.attacked,
+              healed: selectedUnit.healed,
+              onResource,
+              onOwnCity: ownCityAt(selectedUnit.x, selectedUnit.y) !== undefined,
+              homeCity: home,
+              homeTag,
+              homeColor: home === null ? null : session.cityStyle.get(home)?.color ?? null,
+              homeLabel:
+                homeCity === undefined
+                  ? null
+                  : `${homeCity.isCapital ? '首都' : '城市'} ${homeTag ?? ''}`.trim(),
+              // §2 采集谓词由 core 裁定：探针只取拒绝原因上屏（规则不落在 UI）
+              harvestBlocked: onResource === null ? null : probeRejected({ type: 'harvest', unitId: selectedUnit.id }),
+            };
+          })(),
     city:
       city === undefined
         ? null
@@ -342,7 +420,12 @@ function buildModel(): ViewModel {
             label: city.isCapital ? '首都' : '城市',
             level: city.level,
             population: city.population,
+            // 升级需人口 = 城级 + 1（core §4.3 upgradeCity，actions.ts 判定为准）—— 仅进度提示
+            popNeed: city.level + 1,
             stationed: state.units.filter((unit) => unit.homeCity === city.id).length,
+            tag: session.cityStyle.get(city.id)?.tag ?? '?',
+            color: session.cityStyle.get(city.id)?.color ?? '#9aa2bd',
+            isNew: session.newCities.has(city.id),
           },
     unitTypes: unitTypeIds.map((id) => ({
       id,
@@ -371,6 +454,7 @@ function renderNow(): void {
 function boot(): void {
   const root = document.getElementById('app');
   if (root === null) throw new Error('demo: 缺少 #app 容器');
+  syncCityStyles(false); // 首都开局配色，不算新占领
   refreshView();
   recomputeReachable();
   mount(root, handlers);

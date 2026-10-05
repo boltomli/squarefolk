@@ -12,8 +12,23 @@ export interface CellModel {
   resource: string | null;
   village: boolean;
   city: 'capital' | 'city' | null;
-  unit: { id: string; type: string; hp: number; acted: boolean } | null;
+  /** 己方城市格 → 城市配色（描边/图标底色）；非己方或 hidden → null */
+  cityColor: string | null;
+  /** 本回合新占领（表现层标记，结束回合清除） */
+  cityNew: boolean;
+  unit: {
+    id: string;
+    type: string;
+    hp: number;
+    acted: boolean;
+    /** 母城徽记字母（homeCity 无 → null） */
+    homeTag: string | null;
+    /** 母城配色 */
+    homeColor: string | null;
+  } | null;
   inTerritory: boolean;
+  /** 归属城市配色（领地半透明底色）；非己方或 hidden → null */
+  territoryColor: string | null;
   reachable: boolean;
   selected: boolean;
 }
@@ -36,8 +51,26 @@ export interface ViewModel {
     healed: boolean;
     onResource: string | null;
     onOwnCity: boolean;
+    /** 母城 id（null = 初始单位无母城） */
+    homeCity: string | null;
+    homeTag: string | null;
+    homeColor: string | null;
+    homeLabel: string | null;
+    /** core 采集拒绝原因（探针结果）；null = 可采集或脚格上无资源 */
+    harvestBlocked: string | null;
   } | null;
-  city: { id: string; label: string; level: number; population: number; stationed: number } | null;
+  city: {
+    id: string;
+    label: string;
+    level: number;
+    population: number;
+    /** 升至 level+1 所需人口（core §4.3 提示值） */
+    popNeed: number;
+    stationed: number;
+    tag: string;
+    color: string;
+    isNew: boolean;
+  } | null;
   unitTypes: { id: string; label: string; cost: number; tech: string | null }[];
   techs: { id: string; label: string; done: boolean; requires: string[] }[];
   overlay: boolean;
@@ -113,10 +146,17 @@ function cellHtml(cell: CellModel): string {
   if (cell.inTerritory) classes.push('mine');
   if (cell.reachable) classes.push('reach');
   if (cell.selected) classes.push('sel');
+  if (cell.cityColor !== null) classes.push('cityown');
+  if (cell.cityNew) classes.push('citynew');
 
   const terrain =
     cell.visibility === 'hidden' ? null : TERRAIN_STYLE[cell.terrain ?? 'plain'] ?? TERRAIN_STYLE.plain;
-  const background = terrain === null ? '' : ` style="background:${terrain.bg}"`;
+  const styles: string[] = [];
+  if (terrain !== null) styles.push(`background:${terrain.bg}`);
+  if (cell.territoryColor !== null) styles.push(`--fill:${cell.territoryColor}`);
+  if (cell.cityColor !== null) styles.push(`--cityc:${cell.cityColor}`);
+  const background = styles.length === 0 ? '' : ` style="${styles.join(';')}"`;
+
   let inner = '<span class="fog">?</span>';
   let title = terrain === null ? '未探索' : `${terrain.name} (${cell.x},${cell.y})`;
   if (terrain !== null) {
@@ -126,12 +166,21 @@ function cellHtml(cell: CellModel): string {
       inner += `<span class="feat">${RESOURCE_ICON[cell.resource] ?? '✦'}</span>`;
       title += ` · ${RESOURCE_LABELS[cell.resource] ?? cell.resource}`;
     }
-    if (cell.city === 'capital') inner += '<span class="feat">🏰</span>';
-    else if (cell.city === 'city') inner += '<span class="feat">🏠</span>';
-    else if (cell.village) inner += '<span class="feat">🏘️</span>';
+    if (cell.city === 'capital' || cell.city === 'city') {
+      const icon = cell.city === 'capital' ? '🏰' : '🏠';
+      inner += `<span class="feat citychip">${icon}</span>`;
+      if (cell.cityNew) inner += '<b class="newmark">新</b>';
+      title += ` · 城市${cell.cityNew ? '（本回合新占领）' : ''}`;
+    } else if (cell.village) {
+      inner += '<span class="feat">🏘️</span>';
+    }
     if (cell.unit !== null) {
       const icon = UNIT_ICON[cell.unit.type] ?? '兵';
-      inner += `<span class="unit${cell.unit.acted ? ' acted' : ''}">${icon}<i>${cell.unit.hp}</i></span>`;
+      const home =
+        cell.unit.homeTag === null
+          ? '<b class="home none">–</b>'
+          : `<b class="home" style="background:${cell.unit.homeColor ?? '#9aa2bd'}">${cell.unit.homeTag}</b>`;
+      inner += `<span class="unit${cell.unit.acted ? ' acted' : ''}">${home}${icon}<i>${cell.unit.hp}</i></span>`;
     }
   }
   return `<div class="${classes.join(' ')}" data-act="tile" data-x="${cell.x}" data-y="${cell.y}"${background} title="${esc(title)}">${inner}</div>`;
@@ -145,14 +194,25 @@ function unitHtml(model: ViewModel): string {
     unit.attacked ? '已攻击' : '',
     unit.healed ? '已治疗' : '',
   ].filter((flag) => flag !== '').join(' · ');
-  const harvest =
-    unit.onResource !== null
-      ? `<button class="act primary" data-act="harvest">采集 ${RESOURCE_LABELS[unit.onResource] ?? unit.onResource}</button>`
-      : '';
+  const home =
+    unit.homeCity === null
+      ? '<p class="hint">母城：无（初始单位，不占城容量）</p>'
+      : `<p class="hint">母城：<b class="chip"${unit.homeColor === null ? '' : ` style="background:${unit.homeColor}"`}>${unit.homeTag ?? '?'}</b> ${esc(unit.homeLabel ?? unit.homeCity)} <small>${unit.homeCity}</small></p>`;
+  let harvest = '';
+  if (unit.onResource !== null) {
+    const label = RESOURCE_LABELS[unit.onResource] ?? unit.onResource;
+    if (unit.harvestBlocked !== null) {
+      // core 的拒绝原话上屏（§2 谓词判定在 core，UI 只转述）
+      harvest = `<button class="act primary" disabled>采集 ${esc(label)}</button><p class="why">✗ ${esc(unit.harvestBlocked)}</p>`;
+    } else {
+      harvest = `<button class="act primary" data-act="harvest">采集 ${esc(label)}</button>`;
+    }
+  }
   return `<section class="card">
     <h2>${esc(unit.label)} <small>${unit.id}</small></h2>
     <p>HP ${unit.hp}/${unit.maxHp}${flags === '' ? '' : ` · ${flags}`}</p>
-    <p class="hint">点击绿色高亮格移动${unit.onOwnCity ? '；本格是你的城市，下方可操作' : ''}</p>
+    ${home}
+    <p class="hint">点击高亮格移动${unit.onOwnCity ? '；本格是你的城市，下方可操作' : ''}</p>
     ${harvest}
   </section>`;
 }
@@ -177,11 +237,19 @@ function cityHtml(model: ViewModel): string {
       return `<li><button class="act" data-act="research" data-arg="${tech.id}">研究 ${esc(tech.label)}${need}</button></li>`;
     })
     .join('');
+  const short = city.population < city.popNeed;
+  const popHint = short
+    ? `<p class="hint">人口来源：派单位踩领地内 🍎 并采集（+1）—— 还差 ${city.popNeed - city.population} 人口</p>`
+    : '<p class="hint">人口来源：派单位踩领地内 🍎 并采集（+1）</p>';
   return `<section class="card">
-    <h2>${city.label.startsWith('首都') ? '🏰' : '🏠'} ${esc(city.label)} <small>${city.id}</small></h2>
-    <p>城级 ${city.level} · 人口 ${city.population} · 驻留 ${city.stationed}</p>
+    <h2>${city.label.startsWith('首都') ? '🏰' : '🏠'} ${esc(city.label)} <b class="chip" style="background:${city.color}">${city.tag}</b>${
+      city.isNew ? ' <b class="chip warn">本回合新占领</b>' : ''
+    } <small>${city.id}</small></h2>
+    <p>城级 L${city.level} · 人口 ${city.population}/${city.popNeed} · 驻留 ${city.stationed}</p>
+    <p class="hint">升级至 L${city.level + 1} 需 ${city.popNeed} 人口（消耗等额人口）</p>
+    ${popHint}
     <h3>训练</h3><div class="grid">${trains}</div>
-    <h3>升级（消耗人口 = 城级 +1）</h3><div class="grid">${upgrades}</div>
+    <h3>升级（三选一）</h3><div class="grid">${upgrades}</div>
     <h3>研究</h3><ul class="techs">${techs}</ul>
   </section>`;
 }
@@ -189,9 +257,9 @@ function cityHtml(model: ViewModel): string {
 function helpHtml(): string {
   return `<section class="card">
     <h2>沙盒目标</h2>
-    <p>1. 点击己方单位 → 绿色格可移动；踩上 🏘️ 中立村即占领。</p>
-    <p>2. 点首都 🏰 → 训练 / 升级 / 研究科技。</p>
-    <p>3. 研究科技后，派单位踩上领地内的 🍎 / 🐗 点击资源格采集。</p>
+    <p>1. 点击己方单位 → 高亮格可移动；单位角标字母 = 母城归属，踩上 🏘️ 中立村即占领。</p>
+    <p>2. 领地半透明底色 = 归属城市；点城市 🏰 / 🏠 → 训练 / 升级 / 研究。</p>
+    <p>3. 升级需人口：派单位踩领地内 🍎 点击采集 +1（果园已自带）；🐗 采 ⭐ 需先研究狩猎。</p>
     <p>4. 探索 100% 且占领全部村庄 → 🎉。</p>
   </section>`;
 }

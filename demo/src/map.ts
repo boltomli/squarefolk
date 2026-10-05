@@ -2,12 +2,12 @@
  * 手工地图与初始 State 构造 —— 壳层职责（core-spec §1 行 47：迷雾不入 State；
  * 初始状态构造属壳层，规则只经 core API）。
  *
- * 10×10 非对称沙盒：玩家首都 1、中立村 3、🍎×2 / 🐗×2、森林 / 山地 / 沼泽 / 小湖若干。
+ * 10×10 非对称沙盒：玩家首都 1、中立村 3、🍎×4 / 🐗×2、森林 / 山地 / 沼泽 / 小湖若干。
  * 地形图例复用 core 的 §6 图例（. f m s w），不另造约定。
  */
 import { terrainIdFromLegend } from '../../core/src/actions';
 import type { City, Player, State, Tile, Unit } from '../../core/src/state';
-import { CONTENT, START_STARS } from './config';
+import { CONTENT, START_STARS, START_TECHS } from './config';
 
 export const MAP_W = 10;
 export const MAP_H = 10;
@@ -33,9 +33,12 @@ const VILLAGES: readonly { x: number; y: number }[] = [
   { x: 7, y: 7 },
   { x: 4, y: 1 },
 ];
+// 🍎×4 全在首都 radius 1 领地内：升 L2 需 2 人口，不必扫光全图（引导修缮）
 const RESOURCES: readonly { x: number; y: number; id: string }[] = [
   { x: 1, y: 7, id: 'fruit' },
   { x: 0, y: 8, id: 'fruit' },
+  { x: 0, y: 9, id: 'fruit' },
+  { x: 2, y: 9, id: 'fruit' },
   { x: 2, y: 5, id: 'beast' },
   { x: 7, y: 6, id: 'beast' },
 ];
@@ -117,7 +120,7 @@ export function createInitialState(): State {
     homeCity: null,
   }));
   const players: Player[] = [
-    { idx: PLAYER_IDX, name: '方族', tribe: 'tribe.square', stars: START_STARS, techs: [], met: [], eliminated: false },
+    { idx: PLAYER_IDX, name: '方族', tribe: 'tribe.square', stars: START_STARS, techs: [...START_TECHS], met: [], eliminated: false },
   ];
 
   return {

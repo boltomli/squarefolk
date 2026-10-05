@@ -8,6 +8,27 @@ import type { ActionContext } from '../../core/src/actions';
 /** 沙盒初始 ⭐（玩家单人一方） */
 export const START_STARS = 5;
 
+/**
+ * 沙盒初始科技（引导修缮）：果园开局自带 → 采果加人口路径首回合可见。
+ * 否则果园成本 = tier1 × 城数1 + 4 = 5 ⭐ = 全部开局星星，人口死锁、城市升不了 L2。
+ */
+export const START_TECHS: readonly string[] = ['tech.orchard'];
+
+/**
+ * 表现层城市配色 + 徽记字母（仅 presentation；不参与任何规则判定）。
+ * 按「首次出现在玩家视野中的城市」顺序取槽位，故同一局内稳定：单位徽记 ↔ 城市描边一一对应。
+ */
+export const CITY_PALETTE: readonly { color: string; tag: string }[] = [
+  { color: '#ffd54f', tag: 'A' },
+  { color: '#5bc0ff', tag: 'B' },
+  { color: '#ff8bd0', tag: 'C' },
+  { color: '#c69cff', tag: 'D' },
+  { color: '#4be0d0', tag: 'E' },
+  { color: '#ff9b4a', tag: 'F' },
+  { color: '#7cf29b', tag: 'G' },
+  { color: '#ff6b6b', tag: 'H' },
+];
+
 /** 兵种 / 科技 / 资源：ids 与持久化约定一致（字符串 id，禁枚举整数） */
 export const CONTENT: ActionContext = {
   unitTypes: {
