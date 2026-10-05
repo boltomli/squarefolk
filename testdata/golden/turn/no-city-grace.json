@@ -14,7 +14,7 @@
     ],
     "players": [
       { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false },
-      { "id": "B", "stars": 3, "techs": [], "met": [], "eliminated": false }
+      { "id": "B", "stars": 3, "techs": [], "met": [], "eliminated": false, "noCityTurns": 2 }
     ],
     "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
     "techs": {}, "resources": {},
@@ -25,7 +25,7 @@
     "rejected": false,
     "players": [
       { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false },
-      { "id": "B", "stars": 3, "techs": [], "met": [], "eliminated": false }
+      { "id": "B", "stars": 3, "techs": [], "met": [], "eliminated": false, "noCityTurns": 3 }
     ],
     "turn": 8,
     "currentPlayer": "A"
