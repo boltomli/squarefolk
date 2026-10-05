@@ -6,10 +6,12 @@
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "tsc -p tsconfig.json && node dist/core/test/combat-vector-runner.js && node dist/core/test/meta-vector-runner.js && node dist/core/test/move-vector-runner.js && node dist/core/test/vision-vector-runner.js && node dist/core/test/territory-vector-runner.js && node dist/core/test/turn-vector-runner.js && node dist/core/test/movement-assertions.js && node dist/core/test/vision-territory-assertions.js && node dist/core/test/turn-assertions.js && node dist/core/test/unit-assertions.js"
+    "test": "tsc -p tsconfig.json && node dist/core/test/combat-vector-runner.js && node dist/core/test/meta-vector-runner.js && node dist/core/test/move-vector-runner.js && node dist/core/test/vision-vector-runner.js && node dist/core/test/territory-vector-runner.js && node dist/core/test/turn-vector-runner.js && node dist/core/test/movement-assertions.js && node dist/core/test/vision-territory-assertions.js && node dist/core/test/turn-assertions.js && node dist/core/test/unit-assertions.js",
+    "demo": "esbuild demo/src/main.ts demo/src/style.css --bundle --format=iife --minify --outdir=demo/.build --entry-names=bundle && node scripts/build-demo.mjs"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
-    "@types/node": "^24.0.0"
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.0"
   }
 }

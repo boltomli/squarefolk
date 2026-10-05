@@ -12,6 +12,7 @@ export_presets.cfg
 # 构建产物
 data/packs/
 build/
+demo/.build/
 dist/
 target/
 .godot/

@@ -8,7 +8,7 @@
 **Squarefolk（方族）** —— 方形四边网格上的轻量回合制 4X，触摸优先、全平台同源。
 开源但**非商业**：CC BY-NC-SA 4.0（见 [LICENSE.md](LICENSE.md)）。
 
-> **当前阶段：M0 · 规格先行；Phase 1 已落地 TS 战斗核心与黄金向量 runner（`core/`、`data/balance.json`）；Phase 2 已落地 State 模型、规范化序列化与 stateHash、splitmix64/FNV（`core/src/`）；Phase 3 已落地移动可达集 `reachable` 与 move 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + 单测 26）；Phase 4 已落地视野可见集 `vision.ts`、领地归属 `territory.ts` 与 vision/territory 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + 单测 32）；Phase 5 已落地动作管线 `actions.ts`（`applyAction`：§2 谓词 + §3.2 结算、§4.7 征服检查）与 turn 域 9 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + turn 9 + 单测 38，共 72 断言）。**
+> **当前阶段：M0 · 规格先行；Phase 1 已落地 TS 战斗核心与黄金向量 runner（`core/`、`data/balance.json`）；Phase 2 已落地 State 模型、规范化序列化与 stateHash、splitmix64/FNV（`core/src/`）；Phase 3 已落地移动可达集 `reachable` 与 move 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + 单测 26）；Phase 4 已落地视野可见集 `vision.ts`、领地归属 `territory.ts` 与 vision/territory 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + 单测 32）；Phase 5 已落地动作管线 `actions.ts`（`applyAction`：§2 谓词 + §3.2 结算、§4.7 征服检查）与 turn 域 9 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + turn 9 + 单测 38，共 72 断言）；Phase 6 已落地单文件可玩沙盒 demo（`demo/squarefolk.html`：10×10 手工地图、移动/迷雾/占领村/采集/训练/升级/研究、探索 100% + 占 3 村完成覆盖层；`npm run demo` 打包，UI 只调 core API 不实现规则）。**
 
 ## 必读顺序
 
@@ -53,6 +53,8 @@ docs/
 data/                内容与数值 JSON 源（balance.json 等，schema 见 design §6）
 testdata/golden/     语言无关黄金测试向量
 core/                规则核心（Phase 1：TypeScript，规格 = docs/core-spec.md §4.1）
+demo/                Phase 6 单文件可玩 demo：src/（main/ui/map/config + style.css）、template.html、产物 squarefolk.html（npm run demo 生成）
+scripts/             构建脚本（build-demo.mjs：把 esbuild 的 JS/CSS 内联进 HTML 模板）
 tools/               [规划] 配置工具 CLI + 桌面编辑器
 ```
 
@@ -61,7 +63,8 @@ tools/               [规划] 配置工具 CLI + 桌面编辑器
 ## 常用命令
 
 - **当前**：
-  - `npm install` —— 安装 devDependencies（typescript、@types/node）
+  - `npm install` —— 安装 devDependencies（typescript、@types/node、esbuild）
+  - `npm run demo` —— esbuild 打包 `demo/src`（`--bundle --format=iife --minify` → `demo/.build/`）+ `scripts/build-demo.mjs` 把 JS/CSS 内联进 `demo/template.html` → 产出单文件 `demo/squarefolk.html`（自检：文件存在、含 `<!DOCTYPE html>`、无 `src=`/`href=` 外链、打印大小）；`file://` 双击即玩，无外部请求。demo 不进 `npm test` 测试链；类型自查 `npx tsc -p demo/tsconfig.json`
   - `npm test` —— `tsc` 编译 + 跑 `testdata/golden/combat/`、`testdata/golden/meta/`、`testdata/golden/move/`、`testdata/golden/vision/`、`testdata/golden/territory/`、`testdata/golden/turn/` 全部黄金向量 + 移动边角单测 + 视野/领地边角单测（viewFor 三态、radius 映射、tie-break、无源空集）+ 动作管线边角单测（征服胜利、killSwap 受阻、被围城收入归零、治疗本土/境外、科技前置拒绝）+ 序列化/哈希/状态不变量单元断言（逐条 PASS/FAIL + 汇总，任一失败非零退出）
   - 自查：`grep -rn "TODO\|FIXME\|XXX" docs/`
   - 改了公式 → 核对 design §3.7 的 8 组标定数值是否仍然自洽
