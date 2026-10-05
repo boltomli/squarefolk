@@ -1,0 +1,33 @@
+{
+  "id": "turn/build-farm-ok",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 build + §4.3 建设细则（v1 数值表）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": true, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": ["tech.orchard"], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": { "tech.orchard": { "tier": 1, "requires": [] }, "tech.mining": { "tier": 1, "requires": [] } },
+    "resources": {},
+    "improvementTypes": {
+      "improvement.farm": { "cost": 5, "allowedOn": ["plain", "swamp"], "tech": "tech.orchard", "yield": { "kind": "pop", "perTurn": 1 } },
+      "improvement.mine": { "cost": 5, "allowedOn": ["mountain"], "tech": "tech.mining", "yield": { "kind": "stars", "perTurn": 2 } },
+      "improvement.road": { "cost": 3, "allowedOn": ["plain", "forest", "swamp"] }
+    },
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "build", "unitId": "unit.000001", "kind": "improvement.farm" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": true, "attacked": false, "healed": false }
+    ],
+    "players": [ { "id": "A", "stars": 0, "techs": ["tech.orchard"], "met": [], "eliminated": false } ],
+    "improved": [[1, 0, "improvement.farm"]]
+  },
+  "notes": "移动后当回合可建（given moved=true，钉死无 !moved 限制）：(0,1) ∈ 首都 (0,0) 半径1 领地、plain ∈ farm.allowedOn、果园已研究、5★→0；旗标不因 build 改变（moved 保持 true、attacked false）；improved 期望为完整集（升序 [y,x]）"
+}

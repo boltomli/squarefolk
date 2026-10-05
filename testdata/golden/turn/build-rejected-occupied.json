@@ -1,0 +1,24 @@
+{
+  "id": "turn/build-rejected-occupied",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 build（无既有 improved）/ §4.3（非 road 检查 improved=null）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [[1, 0, "improvement.farm"]], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": ["tech.orchard"], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": { "tech.orchard": { "tier": 1, "requires": [] } },
+    "resources": {},
+    "improvementTypes": {
+      "improvement.farm": { "cost": 5, "allowedOn": ["plain", "swamp"], "tech": "tech.orchard", "yield": { "kind": "pop", "perTurn": 1 } }
+    },
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "build", "unitId": "unit.000001", "kind": "improvement.farm" }
+  },
+  "expect": { "rejected": true },
+  "notes": "已有改善拒绝：(0,1) given improved 已是 farm → 再建 farm 撞 本格已有改善（其余全绿：领地✓/plain∈allowedOn✓/果园✓/5★✓）；状态零变化"
+}

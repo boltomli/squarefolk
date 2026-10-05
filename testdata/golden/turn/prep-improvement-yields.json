@@ -1,0 +1,30 @@
+{
+  "id": "turn/prep-improvement-yields",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §3.1 prep 第 2 步 + §4.3 建设细则（产出结算）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", ".m.", "..."], "roads": [], "villages": [], "resources": [], "improved": [[1, 0, "improvement.farm"], [1, 1, "improvement.mine"]], "explored": [] },
+    "units": [],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": {},
+    "techs": {},
+    "resources": {},
+    "improvementTypes": {
+      "improvement.farm": { "cost": 5, "allowedOn": ["plain", "swamp"], "tech": "tech.orchard", "yield": { "kind": "pop", "perTurn": 1 } },
+      "improvement.mine": { "cost": 5, "allowedOn": ["mountain"], "tech": "tech.mining", "yield": { "kind": "stars", "perTurn": 2 } }
+    },
+    "currentPlayer": "A", "turn": 7, "phase": "act",
+    "action": { "type": "endTurn" }
+  },
+  "expect": {
+    "rejected": false,
+    "players": [ { "id": "A", "stars": 4, "techs": [], "met": [], "eliminated": false } ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 1, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "improved": [[1, 0, "improvement.farm"], [1, 1, "improvement.mine"]],
+    "turn": 8,
+    "currentPlayer": "A"
+  },
+  "notes": "改善产出结算（单人回绕 → 本回合立即 prep）：城市收入 = level1 + 首都1 = 2；矿在领地（(1,1) 距首都 (0,0) 切比雪夫 1）→ +2 → stars 0→4；农场 (1,0) 同在领地 → 归属城 c1 population 0→1；improved 不变；T4：A 有城 → noCityTurns 归零（缺省 0）；回合 7→8、回绕 currentPlayer A"
+}

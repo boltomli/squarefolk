@@ -74,7 +74,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 
 **准备阶段 `prep`**
 1. 清本方所有单位 `moved = attacked = healed = false`（敌方在我回合读到的正是我上一轮的标记 → 姿态语义）
-2. 收入：按 `cities` id 序逐城 —— 未被围 → `stars += level + (hasWorkshop ? 1 : 0) + (isCapital ? capitalBonus : 0)`；被围城贡献 0
+2. 收入：按 `cities` id 序逐城 —— 未被围 → `stars += level + (hasWorkshop ? 1 : 0) + (isCapital ? capitalBonus : 0)`；被围城贡献 0；**随后按 §4.3 建设细则结算改善产出（农场 → 归属城人口（城序）→ 矿 → 玩家星星）**
 3. `phase = act`
 
 **行动阶段 `act`**：玩家反复提交动作；每个动作走 3.2 管线。
@@ -243,7 +243,23 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 **采集与建筑**
 
 - `harvest`：按 data 一次性给人口或星星 —— **给人口时落到该格领土归属的城市**（§4.3 归属规则的自然延伸：格子归谁、人口归谁；无主格上的采集品不可采），给星星则直接进玩家 `stars`；**一次性收入占全程 ≤ 30%**（`sim` 指标，design §4.2.1-3）
-- `build`：农场 / 矿 / 锯木厂 / 道路等，造价与产出全在 data；**TTR ∈ [2, 4]** 为平衡验收区间（design §4.2.2），由 `dump` 输出实测表
+- `build`：农场 / 矿 / 道路（锯木厂等后续注册），造价与产出全在 data；**TTR ∈ [2, 4]** 为平衡验收区间（design §4.2.2），由 `dump` 输出实测表
+
+**建设细则（v1 数值与产出，design v0.16 拍板）**
+
+- **内容数据 `improvementTypes`**（data 层；夹具可内联，schema 同 `unitTypes`）：`{ cost: int, allowedOn: [terrainId], tech: techId?, yield?: { kind: 'pop'|'stars', perTurn: int } }`。没有 `yield` 的改善不产生每回合收益；`improvement.road` 特殊 —— 写 `tiles.road = true`（不写 `improved`），其 `allowedOn` 即 §4.2 道路例外的地形限制
+- **v1 数值**：
+  | kind | cost | allowedOn | tech | yield |
+  |---|---|---|---|---|
+  | `improvement.farm` | 5 | `plain, swamp` | `tech.orchard` | `pop +1/回合` |
+  | `improvement.mine` | 5 | `mountain` | `tech.mining` | `stars +2/回合`（TTR=2.5 ✓） |
+  | `improvement.road` | 3 | `plain, forest, swamp`（山/水不可修） | 无 | 无 |
+- **谓词补充（§2 `build` 行之外的字段检查）**：`kind=road` → 校验 `tiles.road = false`（已有路不可重复修）；其余 kind → 校验 `tiles.improved = null`；**build 需 `!attacked`**（攻击过的单位本回合不可建）；**无 `!moved` 限制**（走到格上当回合可建，与 harvest 一致）；旗标不因 build 改变
+- **产出结算（prep；并入 §3.1 第 2 步，城序 = `cities` id 序）**：
+  1. 城市收入（原公式不变，被围 = 0）
+  2. **农场 → 人口**：每城 `population += Σ perTurn`，求和范围 = **该城领地（§4.3 归属）内**的农场格 —— 与 harvest 同一归属原则（格子归谁、人口归谁）；**领地易主则产出随之易主**（改善随地走，v1 有意为之）
+  3. **矿 → 星星**：`stars += Σ perTurn`，求和范围 = **玩家领地内**的矿格；中立地上的矿无人受益；**矿产不因该城被围清零**（地块产出 ≠ §4.4 的城市收入/治疗/城防）
+- **拒绝理由措辞**（vector 钉死，实现照抄）：`build: 地形 ${terrain} 不符合 ${kind}.allowedOn（§2）`、`build: 目标格不在己方领土（§2 / §4.3）`、`build: 本格已有改善（§2）`、`build: 已有道路（§2）`、`build: 星星不足（${stars} < ${cost}）（§2）`、`build: 科技 ${tech} 未解锁（§2）`
 
 **科技**
 
@@ -465,7 +481,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 {
   "given": {
     "fixture": "actionApply",
-    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [[1, 1]], "resources": [[2, 0, "fruit"]], "explored": [] },
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [[1, 1]], "resources": [[2, 0, "fruit"]], "improved": [], "explored": [] },
     "units": [ { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false } ],
     "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
     "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
@@ -479,8 +495,8 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 }
 ```
 
-- `given` = **动作前的完整切片**（lite State）：`map`（`villages` 中立村庄格、`resources` 资源格与种类）、`units`（×10 属性 + `moved/attacked/healed` 旗 + `homeCity`）、`cities`、`players`、**内容数据三件内联**（`unitTypes` / `techs` / `resources` —— 运行时来自 data 层）、回合指针、`action`
-- `expect` **只列关心的字段**（纪律 §6.2-3）：`rejected`（true = §2 谓词拒绝、状态零变化）、`units` / `cities` / `villages` / `resources` / `players` / `turn` / `currentPlayer` / `winner`；**出现的数组必须是完整期望值**（`units`/`cities` 按 id 序，坐标类 `[y,x]` 升序）
+- `given` = **动作前的完整切片**（lite State）：`map`（`villages` 中立村庄格、`resources` 资源格与种类、`improved` 可选改善格 `[[y,x,kind]]`（缺省 = 无改善；`improvement.road` 不在此列，用 `roads`）、`roads`）、`units`（×10 属性 + `moved/attacked/healed` 旗 + `homeCity`）、`cities`、`players`、**内容数据内联**（`unitTypes` / `techs` / `resources` / `improvementTypes`（可选，build 向量必须注入，缺省 = 空表）—— 运行时来自 data 层）、回合指针、`action`
+- `expect` **只列关心的字段**（纪律 §6.2-3）：`rejected`（true = §2 谓词拒绝、状态零变化）、`units` / `cities` / `villages` / `resources` / `players` / `improved`（完整改善集，`[y,x,kind]` 按 `[y,x]` 升序）/ `roads`（完整路格集，`[y,x]` 升序）/ `turn` / `currentPlayer` / `winner`；**出现的数组必须是完整期望值**（`units`/`cities` 按 id 序，坐标类 `[y,x]` 升序）
 - 收入、治疗等常数来自 `balance`（§4.3 `capitalBonus`），夹具不重复声明
 - 拒绝路径（谓词不通过）与正常路径同格式：`rejected: true` 时其余字段全不校验
 

@@ -1,0 +1,24 @@
+{
+  "id": "turn/build-rejected-terrain",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 build（地形符合 kind.allowedOn）/ §4.3 数值表（mine 只可建于 mountain）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": ["tech.mining"], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": { "tech.mining": { "tier": 1, "requires": [] } },
+    "resources": {},
+    "improvementTypes": {
+      "improvement.mine": { "cost": 5, "allowedOn": ["mountain"], "tech": "tech.mining", "yield": { "kind": "stars", "perTurn": 2 } }
+    },
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "build", "unitId": "unit.000001", "kind": "improvement.mine" }
+  },
+  "expect": { "rejected": true },
+  "notes": "地形不符拒绝：unit 站 plain，mine.allowedOn=[mountain] → 拒绝（其余条件全绿：领地✓/无改善✓/5★✓/已研究 mining✓ → 只剩 allowedOn 一个变量）；状态零变化"
+}

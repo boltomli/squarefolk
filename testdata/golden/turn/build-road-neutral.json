@@ -1,0 +1,34 @@
+{
+  "id": "turn/build-road-neutral",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.2 道路例外 / §4.3（road 写 tiles.road 不写 improved；§2 build 行）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [],
+    "players": [ { "id": "A", "stars": 3, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": {},
+    "resources": {},
+    "improvementTypes": {
+      "improvement.farm": { "cost": 5, "allowedOn": ["plain", "swamp"], "tech": "tech.orchard", "yield": { "kind": "pop", "perTurn": 1 } },
+      "improvement.mine": { "cost": 5, "allowedOn": ["mountain"], "tech": "tech.mining", "yield": { "kind": "stars", "perTurn": 2 } },
+      "improvement.road": { "cost": 3, "allowedOn": ["plain", "forest", "swamp"] }
+    },
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "build", "unitId": "unit.000001", "kind": "improvement.road" }
+  },
+  "expect": {
+    "rejected": false,
+    "players": [ { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false } ],
+    "improved": [],
+    "roads": [[1, 1]],
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ]
+  },
+  "notes": "道路例外三连钉：① 无城玩家（cities=[]、eliminated=false —— T4 新不变量下合法）在中立地修路 → territory 豁免 ② 写 tiles.road（expect.roads=[[1,1]]）、improved 保持空 ③ 3★→0"
+}
