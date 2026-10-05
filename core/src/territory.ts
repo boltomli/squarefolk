@@ -60,6 +60,24 @@ function chebyshev(ax: number, ay: number, bx: number, by: number): number {
 }
 
 /**
+ * §4.3 归属：格子的归属城市 —— 全城池最近（切比雪夫、与阵营无关），距离并列 → `city id` 小者；
+ * 距离 > radius → null（该格 `unowned`）。`territoryGrid` 与动作管线（harvest 人口落城、
+ * heal 本土判定，core-spec §4.3/§2）共用，保证归属口径唯一。
+ */
+export function owningCity(cities: readonly TerritoryCity[], x: number, y: number): TerritoryCity | null {
+  let best: TerritoryCity | null = null;
+  let bestDistance = 0;
+  for (const city of cities) {
+    const distance = chebyshev(x, y, city.x, city.y);
+    if (best === null || distance < bestDistance || (distance === bestDistance && city.id < best.id)) {
+      best = city;
+      bestDistance = distance;
+    }
+  }
+  return best !== null && bestDistance <= best.radius ? best : null;
+}
+
+/**
  * 领地图结算（§4.3 行 254）：每格归全城池中最近城市（切比雪夫、与阵营无关；
  * 并列 → city id 字典序小者），再查该城 `radius`（内 → owner，外 → unowned）。
  * 归属比较是 `(距离, city id)` 全序 → 与 cities 传入顺序无关（确定性）。
@@ -77,16 +95,8 @@ export function territoryGrid(h: number, w: number, cities: readonly TerritoryCi
 
   for (let y = 0; y < h; y += 1) {
     for (let x = 0; x < w; x += 1) {
-      let best: TerritoryCity | null = null;
-      let bestDistance = 0;
-      for (const city of cities) {
-        const distance = chebyshev(x, y, city.x, city.y);
-        if (best === null || distance < bestDistance || (distance === bestDistance && city.id < best.id)) {
-          best = city;
-          bestDistance = distance;
-        }
-      }
-      if (best !== null && bestDistance <= best.radius) {
+      const best = owningCity(cities, x, y);
+      if (best !== null) {
         push(best.owner, y, x);
       } else {
         push(UNOWNED_KEY, y, x);

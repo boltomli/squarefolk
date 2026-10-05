@@ -26,8 +26,8 @@ export interface Tile {
   resource?: string | null;
   /** 该格所属城市 id；无 = null / 缺省（全局唯一，§1 行 45） */
   cityId?: string | null;
-  /** 归属玩家下标；无主 = null（§1 行 39） */
-  owner?: number | null;
+  /** 中立村庄标记（§1 行 39：移动进入 → 转 `cityId`、`village=false`） */
+  village: boolean;
   /** 是否有道路 */
   road: boolean;
   /** 改良设施 id；无 = null / 缺省 */
@@ -218,6 +218,10 @@ export function checkInvariants(state: State, maxHpOf?: MaxHpLookup): string[] {
   if (gridOk) {
     state.tiles.forEach((row, y) => {
       row.forEach((tile, x) => {
+        // §1 行 39：village 为 bool 字段（领地是衍生量，~~owner~~ 已删）
+        if (typeof tile.village !== 'boolean') {
+          errors.push(`tiles[${y}][${x}].village: 期望 bool，得到 ${String(tile.village)}（§1 行 39）`);
+        }
         const cityId = tile.cityId;
         if (cityId === null || cityId === undefined) return;
         if (tileCityOwners.has(cityId)) {

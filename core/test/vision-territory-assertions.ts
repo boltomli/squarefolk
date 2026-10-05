@@ -29,7 +29,7 @@ function expectEqual(label: string, actual: unknown, expected: unknown): void {
 
 // ── viewFor 测试底座：5×5 State，观察者 = player 0 ──
 function plain(overrides?: Partial<Tile>): Tile {
-  return { terrain: 'plain', road: false, ...overrides };
+  return { terrain: 'plain', road: false, village: false, ...overrides };
 }
 
 function makeViewForState(): State {

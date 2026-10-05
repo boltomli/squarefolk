@@ -64,7 +64,7 @@ record(
 
 // ── stateHash（§0 行 18/19）：输出格式与确定性 ──
 function makeState(): State {
-  const plain: Tile = { terrain: 'plain', road: false };
+  const plain: Tile = { terrain: 'plain', road: false, village: false };
   return {
     schemaVersion: 1,
     rulesVersion: '0.1.0',

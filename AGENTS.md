@@ -8,7 +8,7 @@
 **Squarefolk（方族）** —— 方形四边网格上的轻量回合制 4X，触摸优先、全平台同源。
 开源但**非商业**：CC BY-NC-SA 4.0（见 [LICENSE.md](LICENSE.md)）。
 
-> **当前阶段：M0 · 规格先行；Phase 1 已落地 TS 战斗核心与黄金向量 runner（`core/`、`data/balance.json`）；Phase 2 已落地 State 模型、规范化序列化与 stateHash、splitmix64/FNV（`core/src/`）；Phase 3 已落地移动可达集 `reachable` 与 move 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + 单测 26）；Phase 4 已落地视野可见集 `vision.ts`、领地归属 `territory.ts` 与 vision/territory 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + 单测 32）。**
+> **当前阶段：M0 · 规格先行；Phase 1 已落地 TS 战斗核心与黄金向量 runner（`core/`、`data/balance.json`）；Phase 2 已落地 State 模型、规范化序列化与 stateHash、splitmix64/FNV（`core/src/`）；Phase 3 已落地移动可达集 `reachable` 与 move 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + 单测 26）；Phase 4 已落地视野可见集 `vision.ts`、领地归属 `territory.ts` 与 vision/territory 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + 单测 32）；Phase 5 已落地动作管线 `actions.ts`（`applyAction`：§2 谓词 + §3.2 结算、§4.7 征服检查）与 turn 域 9 向量 runner（`npm test` = combat 12 + meta 2 + move 6 + vision 3 + territory 2 + turn 9 + 单测 38，共 72 断言）。**
 
 ## 必读顺序
 
@@ -62,7 +62,7 @@ tools/               [规划] 配置工具 CLI + 桌面编辑器
 
 - **当前**：
   - `npm install` —— 安装 devDependencies（typescript、@types/node）
-  - `npm test` —— `tsc` 编译 + 跑 `testdata/golden/combat/`、`testdata/golden/meta/`、`testdata/golden/move/`、`testdata/golden/vision/`、`testdata/golden/territory/` 全部黄金向量 + 移动边角单测 + 视野/领地边角单测（viewFor 三态、radius 映射、tie-break、无源空集）+ 序列化/哈希/状态不变量单元断言（逐条 PASS/FAIL + 汇总，任一失败非零退出）
+  - `npm test` —— `tsc` 编译 + 跑 `testdata/golden/combat/`、`testdata/golden/meta/`、`testdata/golden/move/`、`testdata/golden/vision/`、`testdata/golden/territory/`、`testdata/golden/turn/` 全部黄金向量 + 移动边角单测 + 视野/领地边角单测（viewFor 三态、radius 映射、tie-break、无源空集）+ 动作管线边角单测（征服胜利、killSwap 受阻、被围城收入归零、治疗本土/境外、科技前置拒绝）+ 序列化/哈希/状态不变量单元断言（逐条 PASS/FAIL + 汇总，任一失败非零退出）
   - 自查：`grep -rn "TODO\|FIXME\|XXX" docs/`
   - 改了公式 → 核对 design §3.7 的 8 组标定数值是否仍然自洽
 - **后续补充**：`validate`、`sim` —— 添加时**必须同步更新本节**（本文件的命令不能过期）。
