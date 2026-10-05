@@ -409,7 +409,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - **坐标**：`units[].x/y` 为列 / 行；`roads`、`cities`、`explored` 与 `expect` 一律 **`[y, x]`**（行主序）
 - `terrain`：每行一个字符串，图例 `.`平原 `f`森林 `m`山地 `s`沼泽 `w`水域（v1 陆地单位不可通行）
 - `roads` / `cities` **叠加**在地形之上：路格 cost 1（森林+路 = 可穿过、cost 1）；城 / 村格 cost 1（占领属 `turn/*`，移动向量只测通行）
-- `explored` 缺省 = **全图已探索**；显式给出时其外即 `hidden`（§4.5 三态里移动只区分这两态）
+- `explored` **缺省或空数组 `[]` = 全图已探索**；**非空**时其外即 `hidden`（§4.5 三态里移动只区分这两态）
 - `units[].move` 为整点移动力（`budget2 = move × 2`）；`owner` 不同 = 敌方（ZOC 与占位判定）
 - **`units[0]` = 发起移动的单位**（夹具约定；其余单位为占位 / ZOC 源）
 - `expect.dest` = 合法目的地集合（**不含出发格**），按 `[y, x]` 字典序；`fixture` 名 `moveReachable` / 后续 `visionVisible` / `territoryGrid`
