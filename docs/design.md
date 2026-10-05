@@ -21,6 +21,7 @@
 | v0.12 | **T1 拍板（方案 C · 动态扩边）**：领地半径随城市等级（默认 `ceil(level/2)`，逐级值进 balance 的 `borderRadiusByLevel`）、归属 = 最近城市胜出、道路可修于中立地；扩边限制暂不加（T1a 后置）。core-spec §4.3 领地小节、§1/§2 谓词、附录同步 |
 | v0.13 | **D13 定案：core = TypeScript**（理由与 Godot 代价见 §9）；**修正 core-spec §4.1.C 攻击式 E 项下标笔误**（E 恒取输出方自己 —— 与 §3.3 `E(攻)/E(守)` 对齐，向量 `dying-rounds-zero` 期望 6→8）；Phase 1 TS 战斗核心 + 向量 runner 落地，12/12 独立复跑通过 |
 | v0.14 | **"打完能走"= 兵种技能字段**（用户拍板）：`canMoveAfterAttack`（默认 false）与 `canAttackAfterMove` 成对，均是 `units.json` 数据属性而非规则分支 —— 默认行为 = 现行"攻击即结束回合"；留给轻骑/斥候类技能兵种。core-spec §2 谓词与 §4.1-G 同步待 P5 合入后落地 |
+| v0.15 | **T4 拍板（英雄无敌 3 式宽限淘汰）**：残兵在无城期间**继续可用**；连续无城 `eliminationGraceTurns`（balance 默认 5）回合未占任何城才判负，占城即清零；淘汰时移除残兵。state 增 `noCityTurns`、不变量改 `eliminated ⇒ 无城市`（§1/§4.7 同步，实现待接）。**T5 分数降级为低优先**（"分数意义不大"）；下一阶段优先级：**世界生成（T3）→ sim** |
 
 ---
 

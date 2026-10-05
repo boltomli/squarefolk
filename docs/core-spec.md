@@ -39,10 +39,10 @@
 | `tiles[y][x]` | struct | `terrain: id`、`resource: id?`、`cityId: id?`、`village: bool`（中立村庄标记；移动进入 → 转 `cityId`、`village=false`）、`road: bool`、`improved: id?`（~~`owner`~~ 已删：领地是衍生量，见 §4.3） |
 | `units[]` | list | `id, owner, type, x, y, hp, moved, attacked, healed: bool, kills: u16, promoted: bool, homeCity` |
 | `cities[]` | list | `id, x, y, owner, level, population, hasWorkshop, hasWall, wallDurability(0..3), isCapital` |
-| `players[]` | list | `idx, name, tribe, stars(i32), techs[], met[], eliminated` |
+| `players[]` | list | `idx, name, tribe, stars(i32), techs[], met[], noCityTurns(u16 连续无城回合，占城清零), eliminated` |
 | `actionLog[]` | list | `{seq, player, type, payload}`，append-only；**全状态可由 seed + log 重建** |
 
-**不变量**（每动作后必须成立，测试断言用）：`0 ≤ hp ≤ maxHp(type)`；每格 ≤1 单位；`cityId` 全局唯一；`stars ≥ 0`；`level ≥ 1`；`population ≥ 0`；`hasWall ⇔ wallDurability ∈ 1..3`；`eliminated ⇔ 无城市`。
+**不变量**（每动作后必须成立，测试断言用）：`0 ≤ hp ≤ maxHp(type)`；每格 ≤1 单位；`cityId` 全局唯一；`stars ≥ 0`；`level ≥ 1`；`population ≥ 0`；`hasWall ⇔ wallDurability ∈ 1..3`；**`eliminated ⇒ 无城市`**（无城 ≠ 立即淘汰 —— 宽限规则见 §4.7）。
 
 **id 生成（动作新建对象）**：`city.` / `unit.` + **六位零填充十进制**，序号 = 现有同前缀 id 的**最大数值后缀 + 1** —— 纯状态导出、无隐藏计数器（村庄占领建城、训练造兵同用此规则）。
 
@@ -312,7 +312,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 | **积分** | 第 30 回合结束时分数最高者胜；分数公式 🔶-T5 |
 | **沙盒** | 无胜利条件 |
 
-- **淘汰**：玩家城市数归 0 → `eliminated = true`（不变量：`eliminated ⇔ 无城市`）；其残余单位处理 🔶-T4（建议：随帝国一并消灭）
+- **淘汰（T4 已拍板，参考英雄无敌 3）**：城市丢光 → 进入**宽限期**：`noCityTurns` 自 +1（该玩家自己回合结束时结算），**期间残兵全部可用**（正常移动 / 攻击 / 采集，只是无城可训练）；宽限期内**占下任何城 → 计数清零**；连续 `eliminationGraceTurns`（∈ balance，默认 **5**）回合未占城 → `eliminated = true`，其残余单位一并移除（v1 取舍，可后改）。不变量：`eliminated ⇒ 无城市`（反之不成立）
 - 同分 tie-break 🔶-T5 一并定
 
 ## 5. 边界情况清单（每条需配向量；✅ = 向量已落地）
@@ -515,6 +515,6 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 | T1a 扩边限制（半径上限 / 增速） | spec | ⏸ 用户："也许加点限制但以后再说" —— 到时只改上限规则与 `borderRadiusByLevel`，**不动谓词** |
 | T2 训练占格与强制推挤 | spec | 🔶 design 未覆盖 —— v1 建议"城上格被占不可训练"，推挤机制后置 |
 | T3 地图生成算法规格 | spec | 🔶 design §2.6 只定了流程与挑选；地形合成算法单独规格后，`world/gen-*` 才可做跨实现断言 |
-| T4 淘汰玩家残余单位 | spec | 🔶 建议随帝国一并消灭（与基线一致性待核） |
-| T5 分数公式与同分 tie-break | spec | 🔶 积分模式与首接触奖励（3–12★）都依赖它 |
+| T4 淘汰（英雄无敌 3 式宽限） | spec | ✅ **已拍板**：残兵无城期间**继续可用**；连续无城 `eliminationGraceTurns`（默认 5，balance）未占任何城才判负、占城清零；淘汰时移除残兵（§4.7）。**实现待接**：`state.noCityTurns`、endTurn 计数、不变量与单测同步 |
+| T5 分数公式与同分 tie-break | spec | ⏸ **低优先**（用户："分数意义不大"）—— 沙盒为当前主玩法、征服模式已有；首接触奖励（3–12★）同级后置 |
 | T6 投石 `canAttackAfterMove` | spec | ✅ **已拍板**：架设型（投石）移动后不可攻击 —— 字段默认 `true`、投石 `false`（§4.1-G） |
