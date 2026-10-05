@@ -414,7 +414,47 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - `explored` **缺省或空数组 `[]` = 全图已探索**；**非空**时其外即 `hidden`（§4.5 三态里移动只区分这两态）
 - `units[].move` 为整点移动力（`budget2 = move × 2`）；`owner` 不同 = 敌方（ZOC 与占位判定）
 - **`units[0]` = 发起移动的单位**（夹具约定；其余单位为占位 / ZOC 源）
-- `expect.dest` = 合法目的地集合（**不含出发格**），按 `[y, x]` 字典序；`fixture` 名 `moveReachable` / 后续 `visionVisible` / `territoryGrid`
+- `expect.dest` = 合法目的地集合（**不含出发格**），按 `[y, x]` 字典序
+
+#### vision 型 given（`fixture: "visionVisible"`）
+
+```json
+{
+  "given": {
+    "fixture": "visionVisible",
+    "viewer": "A",
+    "map": { "h": 3, "w": 3, "terrain": ["m..", "...", "..."], "cities": [[2, 2, "B"]] },
+    "units": [ { "id": "u1", "owner": "A", "x": 1, "y": 1 }, { "id": "e1", "owner": "B", "x": 2, "y": 0 } ]
+  },
+  "expect": { "visible": [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]] }
+}
+```
+
+- 观察者 = `given.viewer`；**视野源只算观察者己方**（§4.5）：己方单位半径 1；**位于山地的己方单位**半径 2；**己方城市**半径 2；距离 = 切比雪夫
+- `cities` 在 vision 夹具中为 **`[y, x, owner]` 三元组**（归属决定是否成源；move 夹具仍用二元组 —— 移动只关心 cost）
+- **空山地不是源**；敌方单位 / 敌城 / 中立城永不是观察者的源
+- `expect.visible` = 可见格集合，`[y, x]` 升序；`viewFor` 三态裁剪的**输出格式**不属本夹具（由状态级向量覆盖）
+
+#### territory 型 given（`fixture: "territoryGrid"`）
+
+```json
+{
+  "given": {
+    "fixture": "territoryGrid",
+    "map": { "h": 3, "w": 3 },
+    "cities": [
+      { "id": "c1", "x": 1, "y": 1, "owner": "A", "radius": 1 },
+      { "id": "c2", "x": 2, "y": 2, "owner": "B", "radius": 1 }
+    ]
+  },
+  "expect": { "territory": { "A": [[0, 0]], "B": [[2, 2]], "unowned": [[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1]] } }
+}
+```
+
+- 每格归**全城池中最近的城市**（切比雪夫，与阵营无关地比较）；**距离并列 → `city id` 字典序小者胜**
+- 格子在**其归属城市** `radius` 内 → 属该城 `owner` 的领土；否则 **`unowned`**（即使更远的别的城市半径覆盖到这里也不算）
+- `radius` 为已解析值：§4.3 的 `level → borderRadiusByLevel` 映射在 balance，**不属本夹具**
+- `expect.territory` 键 = owner id，无主格键 = `"unowned"`；各列表 `[y, x]` 升序
 
 ### 6.2 向量纪律
 

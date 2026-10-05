@@ -1,0 +1,13 @@
+{
+  "id": "vision/no-sources",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.5（视野源仅限观察者己方）",
+  "given": {
+    "fixture": "visionVisible",
+    "viewer": "A",
+    "map": { "h": 3, "w": 3, "terrain": ["m..", "...", "..."], "cities": [[0, 0, "B"]] },
+    "units": [ { "id": "e1", "owner": "B", "x": 1, "y": 1 } ]
+  },
+  "expect": { "visible": [] },
+  "notes": "观察者 A 无任何己方源（单位/城市皆无）：敌山地城 + 敌山地旁单位都贡献不了视野 → 空集。若把敌方实体或空山地当源，本向量必挂"
+}

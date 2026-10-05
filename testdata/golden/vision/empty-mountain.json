@@ -1,0 +1,13 @@
+{
+  "id": "vision/empty-mountain",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.5（山地半径2 仅限『位于山地的己方单位』）",
+  "given": {
+    "fixture": "visionVisible",
+    "viewer": "A",
+    "map": { "h": 5, "w": 5, "terrain": [".....", ".....", "..m..", ".....", "....."], "cities": [] },
+    "units": [ { "id": "u1", "owner": "A", "x": 0, "y": 0 } ]
+  },
+  "expect": { "visible": [[0, 0], [0, 1], [1, 0], [1, 1]] },
+  "notes": "空山地 (2,2) 不是视野源：只有己方单位站上去才升半径2。u1 平原半径1 → 4 格；山地格距 u1 为 2，不可见。若实现把『山地』本身当源，(2,2) 及其周边会混入"
+}
