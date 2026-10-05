@@ -1,0 +1,20 @@
+{
+  "id": "turn/upgrade-wall",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 upgradeCity / §4.3 三选一",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 2, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": {}, "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "upgradeCity", "cityId": "city.000001", "choice": "wall" }
+  },
+  "expect": {
+    "rejected": false,
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 2, "population": 0, "hasWorkshop": false, "hasWall": true, "wallDurability": 3, "isCapital": true } ]
+  },
+  "notes": "升级选墙：人口 2 ≥ 当级需求 level+1 = 2 ✓ → 消耗 2 → population 0、level 1→2；choice=wall → hasWall=true、wallDurability=3（§4.4 耐久基线 3）"
+}

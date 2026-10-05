@@ -1,0 +1,30 @@
+{
+  "id": "turn/end-turn-prep",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §3.1 回合结构（commit → 回绕 prep：清旗 + 收入）/ §4.3 收入公式",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": true, "attacked": true, "healed": true }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 2, "population": 1, "hasWorkshop": true, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 2, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": false }
+    ],
+    "players": [ { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": {}, "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 5, "phase": "act",
+    "action": { "type": "endTurn" }
+  },
+  "expect": {
+    "rejected": false,
+    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "turn": 6,
+    "currentPlayer": "A"
+  },
+  "notes": "单人沙盒回合回绕：commit → currentPlayer 回绕 → turn+1 → prep = 清旗（moved/attacked/healed 全部 false，即下一次敌方读到的防御姿态）+ 收入。收入 = c1(level2 + 工坊1 + 首都1 = 4) + c2(level1) = 5 → stars 0→5（§4.3，capitalBonus=balance 基线 1，无被围城）"
+}

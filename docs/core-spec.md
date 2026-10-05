@@ -36,7 +36,7 @@
 | `turn` | u32 | 从 0 起 |
 | `currentPlayer` | u8 | `players[]` 下标 |
 | `phase` | enum | `prep / act / commit` |
-| `tiles[y][x]` | struct | `terrain: id`、`resource: id?`、`cityId: id?`、`owner: playerIdx?`（无主 = null）、`road: bool`、`improved: id?` |
+| `tiles[y][x]` | struct | `terrain: id`、`resource: id?`、`cityId: id?`、`village: bool`（中立村庄标记；移动进入 → 转 `cityId`、`village=false`）、`road: bool`、`improved: id?`（~~`owner`~~ 已删：领地是衍生量，见 §4.3） |
 | `units[]` | list | `id, owner, type, x, y, hp, moved, attacked, healed: bool, kills: u16, promoted: bool, homeCity` |
 | `cities[]` | list | `id, x, y, owner, level, population, hasWorkshop, hasWall, wallDurability(0..3), isCapital` |
 | `players[]` | list | `idx, name, tribe, stars(i32), techs[], met[], eliminated` |
@@ -44,7 +44,9 @@
 
 **不变量**（每动作后必须成立，测试断言用）：`0 ≤ hp ≤ maxHp(type)`；每格 ≤1 单位；`cityId` 全局唯一；`stars ≥ 0`；`level ≥ 1`；`population ≥ 0`；`hasWall ⇔ wallDurability ∈ 1..3`；`eliminated ⇔ 无城市`。
 
-**衍生量不入状态**（一律现算）：`besieged`、防御姿态、可达集、视野三态、领地（§4.3）。
+**id 生成（动作新建对象）**：`city.` / `unit.` + **六位零填充十进制**，序号 = 现有同前缀 id 的**最大数值后缀 + 1** —— 纯状态导出、无隐藏计数器（村庄占领建城、训练造兵同用此规则）。
+
+**衍生量不入状态**（一律现算）：`besieged`、防御姿态、可达集、视野三态、领地（§4.3）。**已探索迷雾历史不入 State**：`explored` 由 `seed + actionLog` 重放推导（§3.3 确定性），`viewFor` 以参数传入（design §2.5 每玩家位图存档）—— 迷雾影响视图与移动合法性，但 `stateHash` 的哈希对象是 State 本身，不含迷雾。
 
 > 未定项索引见附录（T1 / T6 已关，剩 T2–T5 与 T1a）；**未定前不实现相关分支**。
 
@@ -54,7 +56,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 
 | action | payload | 附加谓词与后效 |
 | --- | --- | --- |
-| `move` | `unitId, x, y` | `!moved && !healed`；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）→ 落地后 `moved = true` |
+| `move` | `unitId, x, y` | `!moved && !attacked && !healed`；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）→ 落地后 `moved = true` |
 | `attack` | `unitId, target(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove || !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E） |
 | `train` | `cityId, type` | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`type` 已解锁；`stars ≥ cost(type)`；城上格为空（T2） |
 | `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（§4.3 领地）；科技已解锁 → 资源移除，按 data 给人口或星星 |
@@ -239,7 +241,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 **采集与建筑**
 
-- `harvest`：按 data 一次性给人口或星星；**一次性收入占全程 ≤ 30%**（`sim` 指标，design §4.2.1-3）
+- `harvest`：按 data 一次性给人口或星星 —— **给人口时落到该格领土归属的城市**（§4.3 归属规则的自然延伸：格子归谁、人口归谁；无主格上的采集品不可采），给星星则直接进玩家 `stars`；**一次性收入占全程 ≤ 30%**（`sim` 指标，design §4.2.1-3）
 - `build`：农场 / 矿 / 锯木厂 / 道路等，造价与产出全在 data；**TTR ∈ [2, 4]** 为平衡验收区间（design §4.2.2），由 `dump` 输出实测表
 
 **科技**
@@ -455,6 +457,31 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - 格子在**其归属城市** `radius` 内 → 属该城 `owner` 的领土；否则 **`unowned`**（即使更远的别的城市半径覆盖到这里也不算）
 - `radius` 为已解析值：§4.3 的 `level → borderRadiusByLevel` 映射在 balance，**不属本夹具**
 - `expect.territory` 键 = owner id，无主格键 = `"unowned"`；各列表 `[y, x]` 升序
+
+#### action 型 given（`fixture: "actionApply"`）
+
+```json
+{
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [[1, 1]], "resources": [[2, 0, "fruit"]], "explored": [] },
+    "units": [ { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false } ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": { "tech.orchard": { "tier": 1, "requires": [] } },
+    "resources": { "fruit": { "effect": "pop" } },
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "move", "unitId": "unit.000001", "x": 1, "y": 1 }
+  },
+  "expect": { "rejected": false, "cities": [ "……完整期望数组，按 id 序……" ], "villages": [] }
+}
+```
+
+- `given` = **动作前的完整切片**（lite State）：`map`（`villages` 中立村庄格、`resources` 资源格与种类）、`units`（×10 属性 + `moved/attacked/healed` 旗 + `homeCity`）、`cities`、`players`、**内容数据三件内联**（`unitTypes` / `techs` / `resources` —— 运行时来自 data 层）、回合指针、`action`
+- `expect` **只列关心的字段**（纪律 §6.2-3）：`rejected`（true = §2 谓词拒绝、状态零变化）、`units` / `cities` / `villages` / `resources` / `players` / `turn` / `currentPlayer` / `winner`；**出现的数组必须是完整期望值**（`units`/`cities` 按 id 序，坐标类 `[y,x]` 升序）
+- 收入、治疗等常数来自 `balance`（§4.3 `capitalBonus`），夹具不重复声明
+- 拒绝路径（谓词不通过）与正常路径同格式：`rejected: true` 时其余字段全不校验
 
 ### 6.2 向量纪律
 

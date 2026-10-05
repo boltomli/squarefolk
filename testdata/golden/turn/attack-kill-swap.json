@@ -1,0 +1,30 @@
+{
+  "id": "turn/attack-kill-swap",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1.C/D（垂死反击）/ §4.1.B（killSwap）/ §4.7 征服检查",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 1, "y": 0, "hp": 3, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 2, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 0, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false }, { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "attack", "unitId": "unit.000001", "targetId": "unit.000002" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 0, "hp": 9, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 1, "promoted": false, "moved": false, "attacked": true, "healed": false }
+    ],
+    "winner": null
+  },
+  "notes": "斩杀+补位：伤害 20×3×20×76/20000 = 4.56 → 5 > 3 血 → 守方亡；垂死反击 E(守方自己 3/10) = 20×3×13×76/(2000×10×4) = 59280/80000 → half-up = 1 → 攻方 10−1=9；killSwap 补进空平原 (1,0)；kills 0→1（<3 不晋升）；attacked=true。首都仍分属 A/B → winner null（动作后必查征服胜利，§3.2 检查点）"
+}

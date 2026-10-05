@@ -1,0 +1,22 @@
+{
+  "id": "turn/research",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 research / §4.3 科技成本公式",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": {},
+    "techs": { "tech.orchard": { "tier": 1, "requires": [] } },
+    "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "research", "techId": "tech.orchard" }
+  },
+  "expect": {
+    "rejected": false,
+    "players": [ { "id": "A", "stars": 0, "techs": ["tech.orchard"], "met": [], "eliminated": false } ]
+  },
+  "notes": "研究成本 = tier × 城市数 + 4 = 1×1+4 = 5 → stars 5−5=0；techs 追加（无前置 ✓、未重复 ✓）"
+}

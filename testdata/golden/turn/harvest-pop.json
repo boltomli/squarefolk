@@ -1,0 +1,25 @@
+{
+  "id": "turn/harvest-pop",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 harvest / §4.3 采集（人口落到该格领土归属城）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [[1, 0, "fruit"]], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": ["tech.orchard"], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": { "tech.orchard": { "tier": 1, "requires": [] } },
+    "resources": { "fruit": { "effect": "pop", "amount": 1 } },
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "harvest", "unitId": "unit.000001" }
+  },
+  "expect": {
+    "rejected": false,
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 1, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "resources": []
+  },
+  "notes": "采集果实 → 人口：格 (1,0) 在 c1 领地内（L1 半径 1，最近城 c1 距 1 ✓）、tech.orchard 已研究 ✓ → 人口落到领土归属城 c1（0→1），资源格移除。resources 期望 = 剩余资源三元组（空）"
+}

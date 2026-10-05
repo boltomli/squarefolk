@@ -1,0 +1,19 @@
+{
+  "id": "turn/move-after-attack-rejected",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 move 谓词（!attacked）/ §4.1-E 攻击即结束回合",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 9, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 1, "promoted": false, "moved": false, "attacked": true, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": {}, "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "move", "unitId": "unit.000001", "x": 1, "y": 0 }
+  },
+  "expect": { "rejected": true },
+  "notes": "攻击后不得再移动（§4.1-E 攻击即结束该单位回合；§2 move 谓词含 !attacked —— 2026-10-05 修补的漏洞回归钉）：attacked=true → move 拒绝，状态零变化"
+}
