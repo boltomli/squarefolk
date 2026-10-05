@@ -22,7 +22,17 @@ function record(label: string, mismatches: string[]): void {
 }
 
 const WARRIOR = { cost: 3, hp: 10, atk10: 20, def10: 20, move: 1, range: 1, counter: [1, 1] } as const;
-const CTX: ActionContext = { unitTypes: { 'unit.warrior': WARRIOR }, techs: {}, resources: {} };
+const CTX: ActionContext = {
+  unitTypes: { 'unit.warrior': WARRIOR },
+  techs: {},
+  resources: {},
+  // §4.3 v1 数值表（内容数据，可调值只在 content/balance —— 夹具内联与 data 同构）
+  improvementTypes: {
+    'improvement.farm': { cost: 5, allowedOn: ['plain', 'swamp'], tech: 'tech.orchard', yield: { kind: 'pop', perTurn: 1 } },
+    'improvement.mine': { cost: 5, allowedOn: ['mountain'], tech: 'tech.mining', yield: { kind: 'stars', perTurn: 2 } },
+    'improvement.road': { cost: 3, allowedOn: ['plain', 'forest', 'swamp'] },
+  },
+};
 
 const maxHpOf = (type: string): number | undefined => (type === 'unit.warrior' ? 10 : undefined);
 
@@ -253,6 +263,7 @@ function unwrap(result: ApplyResult, mismatches: string[]): State | null {
     unitTypes: {},
     techs: { 'tech.t1': { tier: 1, requires: [] }, 'tech.t2': { tier: 2, requires: ['tech.t1'] } },
     resources: {},
+    improvementTypes: {},
   };
   const before = canonicalJson(state);
   const result = applyAction(state, { type: 'research', techId: 'tech.t2' }, ctx);
@@ -383,6 +394,192 @@ function unwrap(result: ApplyResult, mismatches: string[]): State | null {
     if (next.turn !== 1) mismatches.push(`turn: expected 1（回绕）, got ${next.turn}`);
   }
   record('commit: 达阈值 → eliminated + 移除全部残余单位（§4.7 T4 / §3.1 commit-3）', mismatches);
+}
+
+// ── §4.3 拒绝理由措辞（vector 钉死，实现照抄）：六条清单 + !attacked 各一；拒绝 → 输入零变化 ──
+{
+  type BuildCase = { label: string; kind: string; reason: string; mutate: (state: State) => void };
+  const cases: BuildCase[] = [
+    {
+      label: '地形不符 allowedOn',
+      kind: 'improvement.mine',
+      reason: 'build: 地形 plain 不符合 improvement.mine.allowedOn（§2）',
+      mutate: () => {
+        /* unit 站 plain，mine 只可建于 mountain（其余全绿） */
+      },
+    },
+    {
+      label: '无主地不可修（非 road）',
+      kind: 'improvement.farm',
+      reason: 'build: 目标格不在己方领土（§2 / §4.3）',
+      mutate: (state) => {
+        state.cities = [];
+      },
+    },
+    {
+      label: '道路例外：敌方领土不可修',
+      kind: 'improvement.road',
+      reason: 'build: 目标格不在己方领土（§2 / §4.3）',
+      mutate: (state) => {
+        state.cities[0].owner = 1;
+        state.players.push(player(1));
+      },
+    },
+    {
+      label: '本格已有改善',
+      kind: 'improvement.farm',
+      reason: 'build: 本格已有改善（§2）',
+      mutate: (state) => {
+        state.tiles[1][1].improved = 'improvement.farm';
+      },
+    },
+    {
+      label: '已有道路（重复修）',
+      kind: 'improvement.road',
+      reason: 'build: 已有道路（§2）',
+      mutate: (state) => {
+        state.tiles[1][1].road = true;
+      },
+    },
+    {
+      label: '星星不足',
+      kind: 'improvement.farm',
+      reason: 'build: 星星不足（2 < 5）（§2）',
+      mutate: (state) => {
+        state.players[0].stars = 2;
+      },
+    },
+    {
+      label: '科技未解锁',
+      kind: 'improvement.farm',
+      reason: 'build: 科技 tech.orchard 未解锁（§2）',
+      mutate: (state) => {
+        state.players[0].techs = [];
+      },
+    },
+    {
+      label: '!attacked（攻击过不可建）',
+      kind: 'improvement.farm',
+      reason: 'build: !attacked 不满足（§4.3）',
+      mutate: (state) => {
+        state.units[0].attacked = true;
+      },
+    },
+  ];
+  for (const testCase of cases) {
+    const state = baseState({
+      w: 3,
+      h: 3,
+      units: [unit('unit.000001', 0, 1, 1)],
+      cities: [city('city.000001', 0, 0, 0)],
+      players: [player(0, { stars: 5 })],
+    });
+    state.players[0].techs.push('tech.orchard', 'tech.mining'); // 默认全绿 → 只留被测变量
+    testCase.mutate(state);
+    const before = canonicalJson(state);
+    const result = applyAction(state, { type: 'build', unitId: 'unit.000001', kind: testCase.kind }, CTX);
+    const mismatches: string[] = [];
+    if (!result.rejected) {
+      mismatches.push('期望拒绝');
+    } else if (result.reason !== testCase.reason) {
+      mismatches.push(`reason: expected ${JSON.stringify(testCase.reason)}, got ${JSON.stringify(result.reason)}`);
+    }
+    if (canonicalJson(state) !== before) mismatches.push('拒绝路径状态必须零变化（§2）');
+    record(`build 拒绝 ${testCase.label}`, mismatches);
+  }
+}
+
+// ── §4.3 build 成功（road）：中立地豁免 territory → 写 tiles.road 不写 improved、扣 3★、旗标不动 ──
+{
+  const state = baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 1, 1)],
+    cities: [], // 中立地（无城 → 领地豁免；T4 新不变量下合法）
+    players: [player(0, { stars: 3 })],
+  });
+  state.units[0].moved = true; // 无 !moved 限制（走到格上当回合可建）
+  const result = applyAction(state, { type: 'build', unitId: 'unit.000001', kind: 'improvement.road' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    const target = next.tiles[1][1];
+    if (target.road !== true) mismatches.push('tiles.road: expected true');
+    if (target.improved !== null && target.improved !== undefined) {
+      mismatches.push(`road 不得写 improved, got ${String(target.improved)}`);
+    }
+    if (next.players[0].stars !== 0) mismatches.push(`stars: expected 0（3 - 3）, got ${next.players[0].stars}`);
+    const builder = next.units[0];
+    if (!builder.moved) mismatches.push('旗标不因 build 改变（moved 保持 true）');
+    if (builder.attacked) mismatches.push('旗标不因 build 改变（attacked 保持 false）');
+  }
+  record('build road: 中立地可修 → 只写 tiles.road、3★→0、旗标不动（§4.3）', mismatches);
+}
+
+// ── §3.1 prep 第 2 步（§4.3 产出结算）：城收入 → 农场人口 → 矿星星；无主格产出无人受益 ──
+{
+  const state = baseState({
+    w: 3,
+    h: 3,
+    tiles: grid(3, 3, (x, y) => {
+      if (x === 0 && y === 1) return tile('plain', { improved: 'improvement.farm' }); // 首都半径 1 内 → 人口
+      if (x === 1 && y === 1) return tile('mountain', { improved: 'improvement.mine' }); // 半径内 → 星星
+      if (x === 2 && y === 2) return tile('plain', { improved: 'improvement.farm' }); // 半径外无主 → 无人受益
+      if (x === 2 && y === 0) return tile('mountain', { improved: 'improvement.mine' }); // 半径外无主 → 无人受益
+      return tile();
+    }),
+    cities: [city('city.000001', 0, 0, 0, { isCapital: true })],
+    players: [player(0)],
+    currentPlayer: 0,
+  });
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    // 收入 2（level1 + 首都1）→ 农场人口 +1 → 矿 +2：stars = 0+2+2 = 4；无主农场/矿各排除
+    if (next.players[0].stars !== 4) {
+      mismatches.push(`A stars: expected 4（城收入2 + 领地矿2，无主矿排除）, got ${next.players[0].stars}`);
+    }
+    if (next.cities[0].population !== 1) {
+      mismatches.push(`population: expected 1（领地内农场 +1，无主农场排除）, got ${next.cities[0].population}`);
+    }
+    if (next.turn !== 1) mismatches.push(`turn: expected 1（单人回绕）, got ${next.turn}`);
+    if (next.currentPlayer !== 0) mismatches.push(`currentPlayer: expected 0, got ${next.currentPlayer}`);
+    if (next.phase !== 'act') mismatches.push(`phase: expected act, got ${next.phase}`);
+  }
+  record('prep: 改善产出结算（城收入→农场人口→矿星星）+ 无主格排除（§3.1/§4.3）', mismatches);
+}
+
+// ── §4.3 产出随领地易主：改善随地走 —— 归属城改属 B → 产出落 B，A 无城不受益 ──
+{
+  const state = baseState({
+    w: 3,
+    h: 3,
+    tiles: grid(3, 3, (x, y) => {
+      if (x === 0 && y === 1) return tile('plain', { improved: 'improvement.farm' });
+      if (x === 1 && y === 1) return tile('mountain', { improved: 'improvement.mine' });
+      return tile();
+    }),
+    cities: [city('city.000001', 0, 0, 1)], // 非首都（无首都 → 不触发 §4.7 征服）；城已易主给 B
+    players: [player(0), player(1)],
+    currentPlayer: 0, // A 提交 endTurn → 轮转到 B 的 prep 结算
+  });
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    if (next.players[1].stars !== 3) {
+      mismatches.push(`B stars: expected 3（城收入1 + 领地矿2）, got ${next.players[1].stars}`);
+    }
+    if (next.players[0].stars !== 0) {
+      mismatches.push(`A stars: expected 0（领地已易主 → 产出不归 A）, got ${next.players[0].stars}`);
+    }
+    if (next.cities[0].population !== 1) {
+      mismatches.push(`population: expected 1（农场产出随领地落 B 的城）, got ${next.cities[0].population}`);
+    }
+    if (next.currentPlayer !== 1) mismatches.push(`currentPlayer: expected 1, got ${next.currentPlayer}`);
+  }
+  record('prep: 领地易主 → 农场/矿产出随之转移（改善随地走，§4.3）', mismatches);
 }
 
 console.log(`${pass}/${pass + fail} PASS`);

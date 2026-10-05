@@ -1,0 +1,42 @@
+{
+  "id": "turn/prep-yields-owner-only",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.3 产出结算（按准备玩家结算 —— 每次 prep 只结 currentPlayer 领地内的产出）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 5, "w": 5, "terrain": [".....", ".....", ".....", "...m.", "....."], "roads": [], "villages": [], "resources": [], "improved": [[3, 3, "improvement.mine"], [3, 4, "improvement.farm"]], "explored": [] },
+    "units": [],
+    "cities": [
+      { "id": "city.000001", "x": 4, "y": 4, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 7, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": {},
+    "techs": {},
+    "resources": {},
+    "improvementTypes": {
+      "improvement.farm": { "cost": 5, "allowedOn": ["plain", "swamp"], "tech": "tech.orchard", "yield": { "kind": "pop", "perTurn": 1 } },
+      "improvement.mine": { "cost": 5, "allowedOn": ["mountain"], "tech": "tech.mining", "yield": { "kind": "stars", "perTurn": 2 } }
+    },
+    "currentPlayer": "B", "turn": 7, "phase": "act",
+    "action": { "type": "endTurn" }
+  },
+  "expect": {
+    "rejected": false,
+    "players": [
+      { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 7, "techs": [], "met": [], "eliminated": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 4, "y": 4, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "improved": [[3, 3, "improvement.mine"], [3, 4, "improvement.farm"]],
+    "turn": 8,
+    "currentPlayer": "A"
+  },
+  "notes": "结算范围分水岭：改善全在 B 领地（(3,3)矿 距 B 首都 (4,4) 切比雪夫 1 / 距 A 首都 (0,0) 为 3；(3,4)农场 距 B 1 / 距 A 4）。players 序 [A,B]、B 为末位 → B 提交回绕 turn++ → 进 **A 的 prep**：A 得自己城收入 1+首都1=2、领地内无改善 → pop 0；B 的 stars 7 与 B 城 population 0 **纹丝不动**（若按『每轮全城池结算』错误读法 → B 变 9/pop1 → 本向量红）。improved 不变；A 有城 → noCityTurns 保持 0"
+}

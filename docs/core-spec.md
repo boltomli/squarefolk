@@ -255,11 +255,11 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
   | `improvement.mine` | 5 | `mountain` | `tech.mining` | `stars +2/回合`（TTR=2.5 ✓） |
   | `improvement.road` | 3 | `plain, forest, swamp`（山/水不可修） | 无 | 无 |
 - **谓词补充（§2 `build` 行之外的字段检查）**：`kind=road` → 校验 `tiles.road = false`（已有路不可重复修）；其余 kind → 校验 `tiles.improved = null`；**build 需 `!attacked`**（攻击过的单位本回合不可建）；**无 `!moved` 限制**（走到格上当回合可建，与 harvest 一致）；旗标不因 build 改变
-- **产出结算（prep；并入 §3.1 第 2 步，城序 = `cities` id 序）**：
+- **产出结算（prep；并入 §3.1 第 2 步，城序 = `cities` id 序）**：**按准备玩家结算 —— 每次 prep 只结 `currentPlayer` 领地内的产出**（改善随领地走，别人的产出等他自己 prep 时再结；每人每轮恰结算一次，不随玩家数倍增）
   1. 城市收入（原公式不变，被围 = 0）
   2. **农场 → 人口**：每城 `population += Σ perTurn`，求和范围 = **该城领地（§4.3 归属）内**的农场格 —— 与 harvest 同一归属原则（格子归谁、人口归谁）；**领地易主则产出随之易主**（改善随地走，v1 有意为之）
   3. **矿 → 星星**：`stars += Σ perTurn`，求和范围 = **玩家领地内**的矿格；中立地上的矿无人受益；**矿产不因该城被围清零**（地块产出 ≠ §4.4 的城市收入/治疗/城防）
-- **拒绝理由措辞**（vector 钉死，实现照抄）：`build: 地形 ${terrain} 不符合 ${kind}.allowedOn（§2）`、`build: 目标格不在己方领土（§2 / §4.3）`、`build: 本格已有改善（§2）`、`build: 已有道路（§2）`、`build: 星星不足（${stars} < ${cost}）（§2）`、`build: 科技 ${tech} 未解锁（§2）`
+- **拒绝理由措辞**（vector 钉死，实现照抄）：`build: 地形 ${terrain} 不符合 ${kind}.allowedOn（§2）`、`build: 目标格不在己方领土（§2 / §4.3）`、`build: 本格已有改善（§2）`、`build: 已有道路（§2）`、`build: 星星不足（${stars} < ${cost}）（§2）`、`build: 科技 ${tech} 未解锁（§2）`、`build: !attacked 不满足（§4.3）`、`build: 改善类型 ${kind} 未知（§4.3 内容数据）`
 
 **科技**
 

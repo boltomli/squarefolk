@@ -45,6 +45,8 @@ export const CONTENT: ActionContext = {
     fruit: { effect: 'pop', amount: 1, tech: 'tech.orchard' },
     beast: { effect: 'stars', amount: 2, tech: 'tech.hunt' },
   },
+  // demo 无建设 UI → 无改善类型（core 谓词对未知 kind 拒绝，不发数）
+  improvementTypes: {},
 };
 
 /** 展示序（红线 3：显式排序，不依赖对象/哈希迭代序） */

@@ -70,6 +70,8 @@ interface GivenMap {
   roads?: number[][] | null;
   villages?: number[][] | null;
   resources?: (string | number)[][] | null;
+  /** §6 行 498：可选改善格 [y,x,kind]（缺省 = 无改善；improvement.road 不在此列，用 roads） */
+  improved?: (string | number)[][] | null;
   explored?: number[][] | null;
 }
 
@@ -85,6 +87,8 @@ interface TurnVector {
     unitTypes: ActionContext['unitTypes'];
     techs: ActionContext['techs'];
     resources: ActionContext['resources'];
+    /** §6 行 498：build 向量必须注入，缺省 = 空表 */
+    improvementTypes?: ActionContext['improvementTypes'];
     currentPlayer: string;
     turn: number;
     phase: string;
@@ -131,6 +135,11 @@ function assemble(vector: TurnVector): Assembled {
     const [ry, rx, kind] = entry as [number, number, string];
     resourceAt.set(ry * w + rx, kind);
   }
+  const improvedAt = new Map<number, string>();
+  for (const entry of given.map.improved ?? []) {
+    const [iy, ix, kind] = entry as [number, number, string];
+    improvedAt.set(iy * w + ix, kind);
+  }
   const cityAt = new Map<number, string>();
   for (const city of given.cities) cityAt.set(city.y * w + city.x, city.id);
 
@@ -144,6 +153,8 @@ function assemble(vector: TurnVector): Assembled {
       const tile: Tile = { terrain: terrainIdFromLegend(row[x]), road: roadCells.has(key), village: villageCells.has(key) };
       const resource = resourceAt.get(key);
       if (resource !== undefined) tile.resource = resource;
+      const improved = improvedAt.get(key);
+      if (improved !== undefined) tile.improved = improved;
       const cityId = cityAt.get(key);
       if (cityId !== undefined) tile.cityId = cityId;
       tilesRow.push(tile);
@@ -233,7 +244,12 @@ function assemble(vector: TurnVector): Assembled {
     playerIds,
     inlineById,
     maxHpByType,
-    ctx: { unitTypes: given.unitTypes, techs: given.techs, resources: given.resources },
+    ctx: {
+      unitTypes: given.unitTypes,
+      techs: given.techs,
+      resources: given.resources,
+      improvementTypes: given.improvementTypes ?? {}, // §6 行 498：缺省 = 空表
+    },
   };
 }
 
@@ -338,18 +354,27 @@ function projectPlayers(state: State): Record<string, unknown>[] {
   }));
 }
 
-/** tiles 行主序清单：villages = 中立村庄格 [y,x]；resources = 剩余资源 [y,x,kind] */
-function collectTiles(state: State): { villages: number[][]; resources: (string | number)[][] } {
+/** tiles 行主序清单：villages = 中立村庄格 [y,x]；resources = 剩余资源 [y,x,kind]；improved = 改善格 [y,x,kind]；roads = 路格 [y,x] */
+function collectTiles(state: State): {
+  villages: number[][];
+  resources: (string | number)[][];
+  improved: (string | number)[][];
+  roads: number[][];
+} {
   const villages: number[][] = [];
   const resources: (string | number)[][] = [];
+  const improved: (string | number)[][] = [];
+  const roads: number[][] = [];
   for (let y = 0; y < state.map.height; y += 1) {
     for (let x = 0; x < state.map.width; x += 1) {
       const tile = state.tiles[y][x];
       if (tile.village) villages.push([y, x]);
       if (tile.resource !== null && tile.resource !== undefined) resources.push([y, x, tile.resource]);
+      if (tile.improved !== null && tile.improved !== undefined) improved.push([y, x, tile.improved]);
+      if (tile.road) roads.push([y, x]);
     }
   }
-  return { villages, resources };
+  return { villages, resources, improved, roads };
 }
 
 /** expect 出现的字段 → 断言（未知字段 = FAIL，防向量字段拼错静默通过） */
@@ -387,6 +412,12 @@ function assertFields(
         break;
       case 'resources':
         actual = tiles.resources;
+        break;
+      case 'improved':
+        actual = tiles.improved;
+        break;
+      case 'roads':
+        actual = tiles.roads;
         break;
       case 'turn':
         actual = state.turn;

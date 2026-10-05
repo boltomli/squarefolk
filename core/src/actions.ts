@@ -10,7 +10,7 @@
  *   规范化序列化相等断言，§6 行 483「rejected: true 时其余字段全不校验」）。
  * - 动作身份 = state.currentPlayer（§6 action 型夹具无 player 字段；联机身份由传输层归属）。
  * - 迷雾不入 State（§1 行 47）：move 的 hidden 判定由调用方经 options.explored 按行动玩家传入。
- * - 内容三件（unitTypes / techs / resources）注入（§6 行 478：运行时来自 data 层）。
+ * - 内容四件（unitTypes / techs / resources / improvementTypes）注入（§6 行 478/498：运行时来自 data 层）。
  * - 派生量（besieged / 领地 / 可达 / 视野）一律现算，不落状态（§1 行 47）。
  * - 任何动作后立即执行 §4.7 征服检查与淘汰同步（§3.2 检查点），胜者随结果返回。
  *
@@ -59,11 +59,26 @@ export interface ResourceDef {
   tech?: string;
 }
 
-/** 内容三件（动作管线的数据侧输入） */
+/**
+ * 改善定义（improvementTypes 行段，§4.3 建设细则；schema 同 unitTypes）。
+ * 没有 `yield` 的改善不产生每回合收益；`improvement.road` 由规格钉为特殊 id
+ * （写 `tiles.road` 不写 `tiles.improved`），其 `allowedOn` 即道路例外的地形限制。
+ */
+export interface ImprovementTypeDef {
+  cost: number;
+  allowedOn: readonly string[];
+  /** §2 build「科技已解锁」的科技门槛；内容数据未声明关联 = 无门槛 */
+  tech?: string;
+  /** prep 每回合产出（§4.3 产出结算）；缺省 = 无每回合收益 */
+  yield?: { kind: 'pop' | 'stars'; perTurn: number };
+}
+
+/** 内容四件（动作管线的数据侧输入） */
 export interface ActionContext {
   unitTypes: Record<string, UnitTypeDef>;
   techs: Record<string, TechDef>;
   resources: Record<string, ResourceDef>;
+  improvementTypes: Record<string, ImprovementTypeDef>;
 }
 
 /**
@@ -80,6 +95,8 @@ export interface Action {
   unitType?: string;
   techId?: string;
   choice?: string;
+  /** build 载荷（§2 行 63）：改善类型 id（improvement.*） */
+  kind?: string;
 }
 
 export interface ApplyOptions {
@@ -129,6 +146,9 @@ export function terrainLegendFromId(terrain: string): string {
 
 const economy = balance.economy;
 const promotion = balance.promotion;
+
+/** §4.3：`improvement.road` 由规格钉为特殊改善 id —— 写 `tiles.road`，不写 `tiles.improved` */
+const IMPROVEMENT_ROAD = 'improvement.road';
 
 function isInt(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
@@ -295,8 +315,8 @@ function combatBase(typeDef: UnitTypeDef, unit: Unit): UnitBase {
 
 // ── §3.1 回合阶段 ──
 
-/** §3.1 prep：清本方旗 → 收入（cities id 序；被围归零）→ phase = act */
-function prep(state: State): void {
+/** §3.1 prep：清本方旗 → 收入（cities id 序；被围归零）→ 改善产出（§4.3）→ phase = act */
+function prep(state: State, ctx: ActionContext): void {
   for (const unit of state.units) {
     if (unit.owner === state.currentPlayer) {
       unit.moved = false;
@@ -309,7 +329,56 @@ function prep(state: State): void {
     if (city.owner !== state.currentPlayer || isBesieged(state, city)) continue;
     player.stars += city.level + (city.hasWorkshop ? 1 : 0) + (city.isCapital ? economy.capitalBonus : 0);
   }
+  settleImprovementYields(state, ctx);
   state.phase = 'act';
+}
+
+/**
+ * §3.1 prep 第 2 步尾（§4.3 产出结算，城序 = cities 存储序 = id 序）：
+ * 1. 农场 → 归属城人口：每城 `population += Σ perTurn`（求和范围 = 该城领地内的农场格）；
+ * 2. 矿 → 玩家星星：`stars += Σ perTurn`（求和范围 = 本准备玩家领地内的矿格）。
+ *
+ * 归属口径 = `owningCity`（与 harvest / heal 同一函数）：无主格无人受益（中立地矿无人受益）；
+ * 产出随领地易主（改善随地走，v1 有意为之）—— 领地属谁、在谁的 prep 结算，
+ * 每城每回合至多结算一次（全城池逐 prep 结算会随玩家数翻倍）。
+ * 地块产出不因被围清零（§4.3：≠ §4.4 的城市收入/治疗/城防）。
+ */
+function settleImprovementYields(state: State, ctx: ActionContext): void {
+  const actor = state.currentPlayer;
+  const ownerKey = String(actor);
+  const cities = territoryCities(state);
+  const farmByCity = new Map<string, number>();
+  let mineStars = 0;
+  for (let y = 0; y < state.map.height; y += 1) {
+    for (let x = 0; x < state.map.width; x += 1) {
+      const improved = state.tiles[y][x].improved;
+      if (improved === null || improved === undefined) continue;
+      const def = ctx.improvementTypes[improved];
+      if (def === undefined) {
+        throw new Error(`improvementTypes: 状态引用的改善 ${improved} 不在内容数据中`);
+      }
+      const yieldDef = def.yield;
+      if (yieldDef === undefined) continue; // §4.3：没有 yield 的改善不产生每回合收益
+      if (!isInt(yieldDef.perTurn) || yieldDef.perTurn < 0) {
+        throw new Error(`improvementTypes[${improved}].yield.perTurn 非法`);
+      }
+      const owning = owningCity(cities, x, y);
+      if (owning === null || owning.owner !== ownerKey) continue;
+      if (yieldDef.kind === 'pop') {
+        farmByCity.set(owning.id, (farmByCity.get(owning.id) ?? 0) + yieldDef.perTurn);
+      } else if (yieldDef.kind === 'stars') {
+        mineStars += yieldDef.perTurn;
+      } else {
+        throw new Error(`improvementTypes[${improved}].yield.kind 非法：${String(yieldDef.kind)}`);
+      }
+    }
+  }
+  // 城序应用（§4.3「城序 = cities id 序」；存储序即 id 序，§1 行 26）
+  for (const city of state.cities) {
+    const gain = farmByCity.get(city.id);
+    if (gain !== undefined) city.population += gain;
+  }
+  state.players[actor].stars += mineStars;
 }
 
 /**
@@ -524,6 +593,50 @@ export function applyAction(
       break;
     }
 
+    case 'build': {
+      const { unitId, kind } = action;
+      if (typeof unitId !== 'string') return reject('payload: build.unitId 缺失');
+      if (typeof kind !== 'string') return reject('payload: build.kind 缺失');
+      const unit = findUnit(next, unitId);
+      if (unit === undefined) return reject(`build: 单位 ${unitId} 不存在`);
+      if (unit.owner !== actor) return reject('build: 单位非本方（§2 公共前置）');
+      // §4.3 谓词补充：build 需 !attacked（攻击过的单位本回合不可建）；无 !moved 限制（走到格上当回合可建）
+      if (unit.attacked) return reject('build: !attacked 不满足（§4.3）');
+      const def = ctx.improvementTypes[kind];
+      if (def === undefined) return reject(`build: 改善类型 ${kind} 未知（§4.3 内容数据）`);
+      if (!isInt(def.cost) || def.cost < 0) throw new Error(`improvementTypes[${kind}].cost 非法`);
+      if (!Array.isArray(def.allowedOn)) throw new Error(`improvementTypes[${kind}].allowedOn 非法`);
+      const tile = next.tiles[unit.y][unit.x];
+      // §2 行 63 领土 + §4.3 道路例外：中立地可修、敌方领土不可（owning 归属实时算）
+      const owning = owningCity(territoryCities(next), unit.x, unit.y);
+      if (kind === IMPROVEMENT_ROAD) {
+        if (owning !== null && owning.owner !== String(actor)) {
+          return reject('build: 目标格不在己方领土（§2 / §4.3）');
+        }
+      } else if (owning === null || owning.owner !== String(actor)) {
+        return reject('build: 目标格不在己方领土（§2 / §4.3）');
+      }
+      // §4.3 谓词补充：road → tiles.road=false（已有路不可重复修）；其余 → tiles.improved=null
+      if (kind === IMPROVEMENT_ROAD) {
+        if (tile.road === true) return reject('build: 已有道路（§2）');
+      } else if (tile.improved !== null && tile.improved !== undefined) {
+        return reject('build: 本格已有改善（§2）');
+      }
+      if (!def.allowedOn.includes(tile.terrain)) {
+        return reject(`build: 地形 ${tile.terrain} 不符合 ${kind}.allowedOn（§2）`);
+      }
+      if (player.stars < def.cost) {
+        return reject(`build: 星星不足（${player.stars} < ${def.cost}）（§2）`);
+      }
+      if (def.tech !== undefined && !player.techs.includes(def.tech)) {
+        return reject(`build: 科技 ${def.tech} 未解锁（§2）`);
+      }
+      player.stars -= def.cost;
+      if (kind === IMPROVEMENT_ROAD) tile.road = true;
+      else tile.improved = kind;
+      break; // 旗标不因 build 改变（§4.3）
+    }
+
     case 'research': {
       const { techId } = action;
       if (typeof techId !== 'string') return reject('payload: research.techId 缺失');
@@ -629,7 +742,7 @@ export function applyAction(
         if (!next.players[target].eliminated) break;
       }
       next.currentPlayer = target;
-      prep(next); // §3.1 commit-3 尾：下一玩家的 prep（清旗 + 收入 + phase = act）
+      prep(next, ctx); // §3.1 commit-3 尾：下一玩家的 prep（清旗 + 收入 + 改善产出 + phase = act）
       break;
     }
 
