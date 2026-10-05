@@ -18,5 +18,10 @@
       "flank": { "atk10": 10 },
       "promotion": { "atk10": 10, "def10": 10 }
     }
+  },
+  "movement": {
+    "halfPointsPerPoint": 2,
+    "cost2": { "road": 1, "city": 1, "swamp": 3, "default": 2 },
+    "overshootAllowance2": 1
   }
 }
