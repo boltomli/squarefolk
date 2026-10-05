@@ -72,7 +72,7 @@ function unit(id: string, owner: number, x: number, y: number, extra?: { hp?: nu
   };
 }
 
-function player(idx: number, extra?: { stars?: number; eliminated?: boolean }): Player {
+function player(idx: number, extra?: { stars?: number; noCityTurns?: number; eliminated?: boolean }): Player {
   return {
     idx,
     name: idx === 0 ? 'A' : 'B',
@@ -80,6 +80,7 @@ function player(idx: number, extra?: { stars?: number; eliminated?: boolean }): 
     stars: extra?.stars ?? 0,
     techs: [],
     met: [],
+    noCityTurns: extra?.noCityTurns ?? 0,
     eliminated: extra?.eliminated ?? false,
   };
 }
@@ -259,6 +260,129 @@ function unwrap(result: ApplyResult, mismatches: string[]): State | null {
   if (result.rejected === false) mismatches.push('期望拒绝（前置 tech.t1 未研究；stars 10 ≥ cost 6）');
   if (canonicalJson(state) !== before) mismatches.push('拒绝路径状态必须零变化（§2）');
   record('research: 前置未满足 → rejected，状态零变化（§2/§4.3）', mismatches);
+}
+
+// ── §3.1 commit-2 无城宽限计数（T4，§4.7）：无城提交 +1、未达阈值残兵保留 ──
+{
+  const state = baseState({
+    w: 2,
+    h: 2,
+    units: [unit('unit.000001', 1, 1, 1)], // B 残兵（无城仍可活动，§4.7 宽限期）
+    cities: [city('city.000001', 0, 0, 0, { isCapital: true })],
+    players: [player(0, { noCityTurns: 4 }), player(1, { noCityTurns: 2 })],
+    currentPlayer: 1, // B 无城提交
+  });
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    const b = next.players[1];
+    if (b.noCityTurns !== 3) mismatches.push(`B noCityTurns: expected 3（2+1）, got ${b.noCityTurns}`);
+    if (b.eliminated) mismatches.push('B 不应淘汰（3 < eliminationGraceTurns 5）');
+    if (next.units.length !== 1 || next.units[0].owner !== 1) {
+      mismatches.push(`残兵应保留: expected [B 的 unit.000001], got ${JSON.stringify(next.units.map((u) => u.id))}`);
+    }
+  }
+  record('commit: 无城提交 noCityTurns 2→3、未达阈值不淘汰、残兵保留（§3.1 commit-2 / §4.7）', mismatches);
+}
+
+// ── §3.1 commit-2：有城提交 → noCityTurns 归零 ──
+{
+  const state = baseState({
+    w: 2,
+    h: 2,
+    cities: [city('city.000001', 0, 0, 0, { isCapital: true })],
+    players: [player(0, { noCityTurns: 4 }), player(1)], // A 有城但计数残留 4
+  });
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    if (next.players[0].noCityTurns !== 0) {
+      mismatches.push(`A noCityTurns: expected 0（有城归零）, got ${next.players[0].noCityTurns}`);
+    }
+    if (next.players[0].eliminated) mismatches.push('A 不应淘汰（持有城市）');
+  }
+  record('commit: 有城提交 noCityTurns 归零（§3.1 commit-2）', mismatches);
+}
+
+// ── §4.7：宽限期内占下任何城 → 计数即时清零（move-capture 瞬间） ──
+{
+  const state = baseState({
+    w: 3,
+    h: 3,
+    tiles: grid(3, 3, (x, y) => (x === 1 && y === 0 ? tile('plain', { village: true }) : tile())),
+    units: [unit('unit.000001', 1, 0, 0)],
+    players: [player(0), player(1, { noCityTurns: 3 })],
+    currentPlayer: 1, // B 无城、残兵占村
+  });
+  const result = applyAction(state, { type: 'move', unitId: 'unit.000001', x: 1, y: 0 }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    if (next.players[1].noCityTurns !== 0) {
+      mismatches.push(`B noCityTurns: expected 0（占城清零）, got ${next.players[1].noCityTurns}`);
+    }
+    if (next.cities.length !== 1 || next.cities[0].owner !== 1) {
+      mismatches.push(`应新建 B 的城市: got ${JSON.stringify(next.cities.map((c) => `${c.id}@${c.owner}`))}`);
+    }
+  }
+  record('move: 占村建城瞬间 noCityTurns 清零（§4.7）', mismatches);
+}
+
+// ── §3.1 commit-3：currentPlayer 下移并跳过已淘汰玩家（不回绕 → turn 不动） ──
+{
+  const state = baseState({
+    w: 3,
+    h: 3,
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 2, 2, 2, { isCapital: true }), // C（idx2）持城
+    ],
+    players: [player(0), player(1, { eliminated: true }), player(2)], // B 已淘汰
+    currentPlayer: 0, // A 提交 → 应跳过 B 落到 C
+  });
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    if (next.currentPlayer !== 2) mismatches.push(`currentPlayer: expected 2（跳过已淘汰 B）, got ${next.currentPlayer}`);
+    if (next.turn !== 0) mismatches.push(`turn: expected 0（未回绕不加）, got ${next.turn}`);
+    if (next.players[2].stars !== 2) {
+      mismatches.push(`C stars: expected 2（prep 收入落给 C: level1 + 首都1）, got ${next.players[2].stars}`);
+    }
+  }
+  record('endTurn: 轮转跳过已淘汰玩家（§3.1 commit-3）', mismatches);
+}
+
+// ── §4.7 T4 达阈值：eliminated=true 且移除其全部残余单位（提交者被淘汰 → 继续下移） ──
+{
+  const state = baseState({
+    w: 3,
+    h: 3,
+    units: [
+      unit('unit.000001', 1, 2, 1),
+      unit('unit.000002', 1, 2, 2),
+      unit('unit.000003', 0, 0, 1), // A 残兵应保留
+    ],
+    cities: [city('city.000001', 0, 0, 0, { isCapital: true })],
+    players: [player(0), player(1, { noCityTurns: 4 })],
+    currentPlayer: 1, // B 无城提交 → 4+1 = 5 ≥ eliminationGraceTurns
+  });
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    const b = next.players[1];
+    if (b.noCityTurns !== 5) mismatches.push(`B noCityTurns: expected 5, got ${b.noCityTurns}`);
+    if (!b.eliminated) mismatches.push('B 应淘汰（5 ≥ eliminationGraceTurns 5）');
+    if (next.units.length !== 1 || next.units[0].id !== 'unit.000003') {
+      mismatches.push(`B 的残兵应全部移除: got ${JSON.stringify(next.units.map((u) => u.id))}`);
+    }
+    if (next.currentPlayer !== 0) mismatches.push(`currentPlayer: expected 0（跳过被淘汰的 B + 回绕）, got ${next.currentPlayer}`);
+    if (next.turn !== 1) mismatches.push(`turn: expected 1（回绕）, got ${next.turn}`);
+  }
+  record('commit: 达阈值 → eliminated + 移除全部残余单位（§4.7 T4 / §3.1 commit-3）', mismatches);
 }
 
 console.log(`${pass}/${pass + fail} PASS`);

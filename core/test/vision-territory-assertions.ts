@@ -62,8 +62,8 @@ function makeViewForState(): State {
     ],
     cities: [],
     players: [
-      { idx: 0, name: 'p0', tribe: 'tribe.a', stars: 5, techs: [], met: [], eliminated: false },
-      { idx: 1, name: 'p1', tribe: 'tribe.b', stars: 5, techs: [], met: [], eliminated: false },
+      { idx: 0, name: 'p0', tribe: 'tribe.a', stars: 5, techs: [], met: [], noCityTurns: 0, eliminated: false },
+      { idx: 1, name: 'p1', tribe: 'tribe.b', stars: 5, techs: [], met: [], noCityTurns: 0, eliminated: false },
     ],
     actionLog: [],
   };

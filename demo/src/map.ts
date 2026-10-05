@@ -120,7 +120,7 @@ export function createInitialState(): State {
     homeCity: null,
   }));
   const players: Player[] = [
-    { idx: PLAYER_IDX, name: '方族', tribe: 'tribe.square', stars: START_STARS, techs: [...START_TECHS], met: [], eliminated: false },
+    { idx: PLAYER_IDX, name: '方族', tribe: 'tribe.square', stars: START_STARS, techs: [...START_TECHS], met: [], noCityTurns: 0, eliminated: false },
   ];
 
   return {

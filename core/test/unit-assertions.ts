@@ -89,8 +89,8 @@ function makeState(): State {
       },
     ],
     players: [
-      { idx: 0, name: 'A', tribe: 'tribe.ember', stars: 5, techs: [], met: [], eliminated: false },
-      { idx: 1, name: 'B', tribe: 'tribe.tide', stars: 0, techs: [], met: [], eliminated: true },
+      { idx: 0, name: 'A', tribe: 'tribe.ember', stars: 5, techs: [], met: [], noCityTurns: 0, eliminated: false },
+      { idx: 1, name: 'B', tribe: 'tribe.tide', stars: 0, techs: [], met: [], noCityTurns: 5, eliminated: true },
     ],
     actionLog: [],
   };
@@ -138,9 +138,17 @@ expectViolation(
   'hasWall',
 );
 expectViolation(
-  'invariants: eliminated ⇔ 无城市',
-  (state) => { state.players[1].eliminated = false; },
+  'invariants: eliminated ⇒ 无城市（有城却标记淘汰被抓住）',
+  (state) => { state.players[0].eliminated = true; },
   'eliminated',
+);
+record(
+  'invariants: 无城未淘汰（宽限期，§4.7）→ 合法',
+  (() => {
+    const state = makeState();
+    state.players[1].eliminated = false; // B 无城市但未淘汰 —— 旧 ⇔ 断言的反向已删（§1 行 45 单向）
+    return checkInvariants(state, (type) => (type === 'warrior' ? 10 : undefined));
+  })(),
 );
 expectViolation('invariants: cityId 全局唯一', (state) => { state.tiles[1][1].cityId = 'city.alpha'; }, '全局唯一');
 expectViolation(

@@ -58,6 +58,8 @@ interface GivenPlayer {
   stars: number;
   techs: string[];
   met: number[];
+  /** §1 行 43 连续无城回合；夹具缺省 = 0（§6 缺省字段语义，旧向量零改动） */
+  noCityTurns?: number;
   eliminated: boolean;
 }
 
@@ -187,6 +189,7 @@ function assemble(vector: TurnVector): Assembled {
     stars: player.stars,
     techs: [...player.techs],
     met: [...player.met],
+    noCityTurns: player.noCityTurns ?? 0, // 缺省归一：夹具省略 = 0（§6 缺省字段语义）
     eliminated: player.eliminated,
   }));
 
@@ -330,6 +333,7 @@ function projectPlayers(state: State): Record<string, unknown>[] {
     stars: player.stars,
     techs: player.techs,
     met: player.met,
+    noCityTurns: player.noCityTurns,
     eliminated: player.eliminated,
   }));
 }
@@ -364,6 +368,7 @@ function assertFields(
       if (expected !== winner) mismatches.push(`winner: expected ${JSON.stringify(value)} → idx ${String(expected)}, got ${winner}`);
       continue;
     }
+    let expected = value;
     let actual: unknown;
     switch (key) {
       case 'units':
@@ -373,6 +378,8 @@ function assertFields(
         actual = projectCities(state, assembled.playerIds);
         break;
       case 'players':
+        // 缺省归一（§6 缺省字段语义）：expect.players 省略 noCityTurns 视作 0，与夹具同规则
+        expected = (value as Record<string, unknown>[]).map((player) => ({ noCityTurns: 0, ...player }));
         actual = projectPlayers(state);
         break;
       case 'villages':
@@ -391,8 +398,8 @@ function assertFields(
         mismatches.push(`expect 未知字段 "${key}"`);
         continue;
     }
-    if (!deepEqual(actual, value)) {
-      mismatches.push(`${key}: expected ${JSON.stringify(value)}, got ${JSON.stringify(actual)}`);
+    if (!deepEqual(actual, expected)) {
+      mismatches.push(`${key}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
     }
   }
   return mismatches;

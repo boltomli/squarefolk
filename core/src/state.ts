@@ -85,7 +85,9 @@ export interface Player {
   techs: string[];
   /** 已遭遇玩家 idx 列表（§1 行 43） */
   met: number[];
-  /** eliminated ⇔ 无城市（§1 行 45） */
+  /** u16 连续无城回合（§1 行 43；占城瞬间清零，§4.7 T4 宽限计数） */
+  noCityTurns: number;
+  /** eliminated ⇒ 无城市（§1 行 45；无城 ≠ 立即淘汰 —— 宽限规则见 §4.7） */
   eliminated: boolean;
 }
 
@@ -318,11 +320,11 @@ export function checkInvariants(state: State, maxHpOf?: MaxHpLookup): string[] {
     if (!isInt(player.stars) || player.stars < 0 || player.stars > I32_MAX) {
       errors.push(`players[${index}].stars: 期望 i32 且 ≥ 0，得到 ${String(player.stars)}（§1 行 43/45）`);
     }
-    // §1 行 45：eliminated ⇔ 无城市
+    // §1 行 45：eliminated ⇒ 无城市（反向不成立 —— 无城处于 §4.7 宽限期，不算违规）
     const hasCity = state.cities.some((city) => city.owner === player.idx);
-    if (player.eliminated !== !hasCity) {
+    if (player.eliminated && hasCity) {
       errors.push(
-        `players[${index}]: eliminated=${String(player.eliminated)} 与城市数（${state.cities.filter((city) => city.owner === player.idx).length}）不等价（§1 行 45：eliminated ⇔ 无城市）`,
+        `players[${index}]: eliminated=true 但持有 ${state.cities.filter((city) => city.owner === player.idx).length} 城市（§1 行 45：eliminated ⇒ 无城市）`,
       );
     }
   });

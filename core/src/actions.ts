@@ -2,9 +2,10 @@
  * applyAction —— core-spec §2 动作谓词 + §3.2 单动作管线（Phase 5）。
  *
  * 硬红线（AGENTS.md）：纯函数、仅整数运算，禁随机 / 浮点中间值 / 系统时间 / I/O；
- * 可调常数全部来自 data/balance.json（capitalBonus / healHome / healAway / promotion.kills）。
+ * 可调常数全部来自 data/balance.json（capitalBonus / healHome / healAway / promotion.kills /
+ * elimination.eliminationGraceTurns）。
  *
- * 结构（§3.2）：谓词（§2）全部通过 → 克隆态落地 → 胜利与淘汰检查 → actionLog 追加。
+ * 结构（§3.2）：谓词（§2）全部通过 → 克隆态落地 → 胜利检查 → actionLog 追加。
  * - 拒绝 = 输入状态零变化：先克隆、仅在克隆态上写，拒绝即弃用克隆态（runner 以前后
  *   规范化序列化相等断言，§6 行 483「rejected: true 时其余字段全不校验」）。
  * - 动作身份 = state.currentPlayer（§6 action 型夹具无 player 字段；联机身份由传输层归属）。
@@ -312,14 +313,12 @@ function prep(state: State): void {
 }
 
 /**
- * §3.2 胜利与淘汰检查（任何动作后立即执行）：
- * - 淘汰同步（§4.7 / §1 行 45）：eliminated ⇔ 无城市
+ * §3.2 胜利检查（任何动作后立即执行）：
  * - 征服（§4.7）：某玩家拥有全场全部 isCapital 城 → winner = 其 players 下标；否则 null
+ * - 淘汰标记不再在此同步（§1 行 45 已改单向 eliminated ⇒ 无城市）：无城先进 §4.7 宽限
+ *   （noCityTurns 计数在 endTurn commit-2），达阈值才在提交阶段置 eliminated。
  */
 function checkVictory(state: State): number | null {
-  for (const player of state.players) {
-    player.eliminated = !state.cities.some((city) => city.owner === player.idx);
-  }
   const capitals = state.cities.filter((city) => city.isCapital);
   if (capitals.length === 0) return null;
   const owner = capitals[0].owner;
@@ -606,15 +605,31 @@ export function applyAction(
           // 结构桩：D6 定案后在此推进被围城耐久
         }
       }
-      // §3.1 commit-2：currentPlayer 下移；越过末位 → turn += 1 → 回 prep
-      const after = next.currentPlayer + 1;
-      if (after >= next.players.length) {
-        next.currentPlayer = 0;
-        next.turn += 1;
+      // §3.1 commit-2 无城宽限计数（T4，§4.7）：提交者无城 → noCityTurns+1，
+      // ≥ eliminationGraceTurns → eliminated=true 并移除其全部残余单位；有城 → 归零
+      //（占城瞬间的清零见 captureVillage / §4.7）
+      if (next.cities.some((city) => city.owner === actor)) {
+        player.noCityTurns = 0;
       } else {
-        next.currentPlayer = after;
+        player.noCityTurns += 1;
+        if (player.noCityTurns >= balance.elimination.eliminationGraceTurns) {
+          player.eliminated = true;
+          next.units = next.units.filter((unit) => unit.owner !== actor);
+        }
       }
-      prep(next); // §3.1 commit-2 尾：下一玩家的 prep（清旗 + 收入 + phase = act）
+      // §3.1 commit-3：currentPlayer 下移并跳过已淘汰玩家（提交者自身被淘汰则继续下移）；
+      // 越过末位 → turn += 1 → 回 prep（count 步内至多回绕一次，保证终止）
+      let target = next.currentPlayer;
+      for (let step = 0; step < next.players.length; step += 1) {
+        target += 1;
+        if (target >= next.players.length) {
+          target = 0;
+          next.turn += 1;
+        }
+        if (!next.players[target].eliminated) break;
+      }
+      next.currentPlayer = target;
+      prep(next); // §3.1 commit-3 尾：下一玩家的 prep（清旗 + 收入 + phase = act）
       break;
     }
 
@@ -634,7 +649,8 @@ export function applyAction(
 }
 
 /** §4.2 进入即结算：中立村庄 → 新城市（level1 / pop0 / isCapital=false；§1 行 47 id 生成）。
- * 一次性村庄奖励按 data（villages.json 未入库），core 不发数。 */
+ * 一次性村庄奖励按 data（villages.json 未入库），core 不发数。
+ * §4.7：占下任何城 → noCityTurns 即时清零（领地随新城恢复）。 */
 function captureVillage(state: State, unit: Unit, tile: Tile): void {
   tile.village = false;
   const id = nextId(state.cities, 'city.');
@@ -651,4 +667,5 @@ function captureVillage(state: State, unit: Unit, tile: Tile): void {
     wallDurability: 0,
     isCapital: false,
   });
+  state.players[unit.owner].noCityTurns = 0;
 }
