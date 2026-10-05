@@ -69,6 +69,7 @@ html, body {
 #board {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
   gap: 3px;
   width: min(92vw, 560px);
   aspect-ratio: 1;

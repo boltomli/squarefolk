@@ -239,8 +239,8 @@ function cityHtml(model: ViewModel): string {
     .join('');
   const short = city.population < city.popNeed;
   const popHint = short
-    ? `<p class="hint">人口来源：派单位踩领地内 🍎 并采集（+1）—— 还差 ${city.popNeed - city.population} 人口</p>`
-    : '<p class="hint">人口来源：派单位踩领地内 🍎 并采集（+1）</p>';
+    ? `<p class="hint">人口来源：派单位踩领地内 🍎 并采集（+1）—— 还差 ${city.popNeed - city.population} 人口；🐗 采到的是 +2⭐，不加人口</p>`
+    : '<p class="hint">人口来源：派单位踩领地内 🍎 并采集（+1）；🐗 采到的是 +2⭐，不加人口</p>';
   return `<section class="card">
     <h2>${city.label.startsWith('首都') ? '🏰' : '🏠'} ${esc(city.label)} <b class="chip" style="background:${city.color}">${city.tag}</b>${
       city.isNew ? ' <b class="chip warn">本回合新占领</b>' : ''
@@ -259,7 +259,7 @@ function helpHtml(): string {
     <h2>沙盒目标</h2>
     <p>1. 点击己方单位 → 高亮格可移动；单位角标字母 = 母城归属，踩上 🏘️ 中立村即占领。</p>
     <p>2. 领地半透明底色 = 归属城市；点城市 🏰 / 🏠 → 训练 / 升级 / 研究。</p>
-    <p>3. 升级需人口：派单位踩领地内 🍎 点击采集 +1（果园已自带）；🐗 采 ⭐ 需先研究狩猎。</p>
+    <p>3. 升级需人口：派单位踩领地内 🍎 点击采集 +1（果园已自带）；🐗 采集得 +2⭐（狩猎已自带，不加人口）。</p>
     <p>4. 探索 100% 且占领全部村庄 → 🎉。</p>
   </section>`;
 }

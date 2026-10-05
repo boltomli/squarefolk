@@ -9,10 +9,10 @@ import type { ActionContext } from '../../core/src/actions';
 export const START_STARS = 5;
 
 /**
- * 沙盒初始科技（引导修缮）：果园开局自带 → 采果加人口路径首回合可见。
- * 否则果园成本 = tier1 × 城数1 + 4 = 5 ⭐ = 全部开局星星，人口死锁、城市升不了 L2。
+ * 沙盒初始科技（引导修缮）：果园 → 采果加人口路径首回合可见（否则果园成本 5⭐ = 全部开局星星，人口死锁）；
+ * 狩猎 → 🐗 采集（+2⭐）路径首回合可见，避免"野猪没反应"的误解。
  */
-export const START_TECHS: readonly string[] = ['tech.orchard'];
+export const START_TECHS: readonly string[] = ['tech.orchard', 'tech.hunt'];
 
 /**
  * 表现层城市配色 + 徽记字母（仅 presentation；不参与任何规则判定）。
