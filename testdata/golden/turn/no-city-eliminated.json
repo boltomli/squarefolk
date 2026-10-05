@@ -1,0 +1,37 @@
+{
+  "id": "turn/no-city-eliminated",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.7 T4（阈值淘汰 + 移除残兵）/ §3.1 commit 计数步骤",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 2, "y": 2, "hp": 7, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 1, "promoted": false, "moved": true, "attacked": true, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 3, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "B", "turn": 7, "phase": "act",
+    "action": { "type": "endTurn" }
+  },
+  "expect": {
+    "rejected": false,
+    "players": [
+      { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 3, "techs": [], "met": [], "eliminated": true }
+    ],
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "turn": 8,
+    "currentPlayer": "A"
+  },
+  "notes": "宽限到阈值 → 判负：B 无城 commit → noCityTurns 4→5 ≥ eliminationGraceTurns(5) → eliminated=true **且残余单位 unit.000002 移除**（expect.units 只剩 A 的）；B 的 stars/techs 原样保留（只是出局）；A 收入 2、回绕后 currentPlayer A —— 同时钉住 §3.1『跳过已淘汰玩家』（提交者自身被淘汰 → 下移给 A）"
+}

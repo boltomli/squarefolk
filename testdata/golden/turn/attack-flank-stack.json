@@ -1,0 +1,41 @@
+{
+  "id": "turn/attack-flank-stack",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1.B 加成枚举（flank 对称格 / support_each / 地形 / 姿态）+ §2 attack",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", ".f.", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "A", "type": "unit.warrior", "x": 2, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000003", "owner": "B", "type": "unit.medic", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 0, "def10": 10, "move": 1, "range": 1, "counter": [0, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000004", "owner": "B", "type": "unit.warrior", "x": 1, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 2, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 0, "y": 0, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": {
+      "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] },
+      "unit.medic": { "cost": 5, "hp": 10, "atk10": 0, "def10": 10, "move": 1, "range": 1, "counter": [0, 1] }
+    },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "attack", "unitId": "unit.000001", "targetId": "unit.000003" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": true, "healed": false },
+      { "id": "unit.000002", "owner": "A", "type": "unit.warrior", "x": 2, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000003", "owner": "B", "type": "unit.medic", "x": 1, "y": 1, "hp": 5, "maxHp": 10, "atk10": 0, "def10": 10, "move": 1, "range": 1, "counter": [0, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000004", "owner": "B", "type": "unit.warrior", "x": 1, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "winner": null
+  },
+  "notes": "位置派生加成全栈（首次向量钉 runtime 派生而非夹具直给）：攻方 atk10 = 20 + flank10 = 30（对称格 (2,1) 有友军 —— 关于守方 (1,1) 与攻方 (0,1) 中心对称）；守方 def10 = 10 + 森林10 + 姿态10（flags 全 false）+ 支援5（友军 (1,0) 相邻）= 35 → M = 100−42 = 58；伤害 = 30×3×20×58/20000 = 5.22 → 5；医疗 counter [0,1] → 反击 0（full，剩 5 血）。攻方不 killSwap（守方存活）→ 原位 attacked=true。选医疗当守方是为了让反击归零、避免攻方侧姿态在反击里的时序歧义"
+}
