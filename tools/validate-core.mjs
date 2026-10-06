@@ -20,6 +20,9 @@
  *   4. 改善 allowedOn ⊆ 已知地形 id（core/src/actions.ts LEGEND_BY_TERRAIN）
  *   5. 数值区间：schema minimum/maximum 管单值；此处补跨字段项
  *      （unit.counter 恰为 2 个非负整数 —— 解释器子集无 minItems/maxItems）
+ *   6. balance.world 参数一致性（§4.6 T3）：terrainWeights 键集=已知地形且总和 1000、
+ *      smoothPriority 为已知地形全排列、resourcePlacement/resourceCount/resourceValue
+ *      键集一致且 ⊆ resources 数据、minMapSize ≤ maxMapSize
  */
 
 /** 五个内容文件与其 schema 的配对表（I/O 宿主按此读文件；顺序显式，红线 3） */
@@ -143,7 +146,7 @@ export function validateValue(instance, schema, at, errors) {
  * design §6.1 交叉引用检查：跨文件约束（schema 单文件表达不了的）。
  * 入参四件 = 内容层各文件的正文对象（不含头）。
  */
-export function crossChecks({ units, techs, resources, improvements }) {
+export function crossChecks({ units, techs, resources, improvements, balance }) {
   const errors = [];
 
   // 1. 兵种 / 科技 id 命名规范（显式排序遍历，红线 3）
@@ -214,6 +217,45 @@ export function crossChecks({ units, techs, resources, improvements }) {
     }
   }
 
+  // 6. balance.world 参数一致性（core-spec §4.6 T3）
+  if (balance !== undefined && balance !== null && balance.world !== undefined) {
+    const w = balance.world;
+    // 6a. terrainWeights：键集 = 已知地形、总和 = 1000（§4.6 撒点权重）
+    const tw = w.terrainWeights ?? {};
+    const twKeys = Object.keys(tw).sort();
+    const knownSorted = [...KNOWN_TERRAIN].sort();
+    if (twKeys.join(',') !== knownSorted.join(',')) {
+      errors.push(`balance.world.terrainWeights: 键集应为已知地形 {${knownSorted.join(', ')}}，实际 {${twKeys.join(', ')}}`);
+    }
+    const sum = twKeys.reduce((acc, k) => acc + tw[k], 0);
+    if (sum !== 1000) errors.push(`balance.world.terrainWeights: 总和应为 1000，实际 ${sum}（§4.6）`);
+    // 6b. smoothPriority：已知地形的全排列（平票优先级必须覆盖所有类）
+    const sp = w.smoothPriority ?? [];
+    if (sp.length !== KNOWN_TERRAIN.length || new Set(sp).size !== sp.length || !sp.every((t) => KNOWN_TERRAIN.includes(t))) {
+      errors.push(`balance.world.smoothPriority: 应为已知地形的全排列（${KNOWN_TERRAIN.length} 项互异），实际 ${JSON.stringify(sp)}`);
+    }
+    // 6c/6d. resourcePlacement / resourceCount / resourceValue 键集一致且 ⊆ resources 数据
+    const inResources = (owner, key, ids) => {
+      for (const id of [...ids].sort()) {
+        if (!Object.prototype.hasOwnProperty.call(resources, id)) {
+          errors.push(`${owner}: ${key} 键 ${JSON.stringify(id)} 在 resources 数据中不存在`);
+        }
+      }
+    };
+    const pc = Object.keys(w.resourcePlacement ?? {}).sort();
+    const pn = Object.keys(w.resourceCount ?? {}).sort();
+    if (pc.join(',') !== pn.join(',')) {
+      errors.push(`balance.world: resourcePlacement 键集 {${pc.join(', ')}} ≠ resourceCount 键集 {${pn.join(', ')}}`);
+    }
+    inResources('balance.world.resourcePlacement', 'resource', pc);
+    inResources('balance.world.resourceCount', 'resource', pn);
+    inResources('balance.world.resourceValue', 'resource', Object.keys(w.resourceValue ?? {}));
+    // 6e. minMapSize ≤ maxMapSize
+    if (w.minMapSize > w.maxMapSize) {
+      errors.push(`balance.world: minMapSize ${w.minMapSize} > maxMapSize ${w.maxMapSize}`);
+    }
+  }
+
   return errors;
 }
 
@@ -234,13 +276,14 @@ export function validateDataFiles({ data, schemas }) {
     if (d !== null && s !== null) validateValue(d, s, dataFile, errors);
     loaded[dataFile] = d;
   }
-  const { 'units.json': units, 'techs.json': techs, 'resources.json': resources, 'improvements.json': improvements } = loaded;
-  if (units && techs && resources && improvements) {
+  const { 'units.json': units, 'techs.json': techs, 'resources.json': resources, 'improvements.json': improvements, 'balance.json': balance } = loaded;
+  if (units && techs && resources && improvements && balance) {
     errors.push(...crossChecks({
       units: units.units,
       techs: techs.techs,
       resources: resources.resources,
       improvements: improvements.improvements,
+      balance,
     }));
   }
   return errors;

@@ -3,29 +3,83 @@
   "$id": "squarefolk/data/balance.schema.json",
   "title": "Squarefolk rules layer: balance.json（结构校验：类型 / 必填 / 枚举 / 区间）",
   "type": "object",
-  "required": ["schemaVersion", "combat", "movement", "vision", "territory", "economy", "elimination", "promotion"],
+  "required": [
+    "schemaVersion",
+    "combat",
+    "movement",
+    "vision",
+    "territory",
+    "economy",
+    "elimination",
+    "promotion",
+    "world"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "type": "integer", "enum": [1] },
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
     "combat": {
       "type": "object",
-      "required": ["damageK", "mReductionPercentPerPoint", "def10PerPoint", "def10Cap", "damageDenominator", "dyingCounterDivisor", "contentSafetyCap", "boni"],
+      "required": [
+        "damageK",
+        "mReductionPercentPerPoint",
+        "def10PerPoint",
+        "def10Cap",
+        "damageDenominator",
+        "dyingCounterDivisor",
+        "contentSafetyCap",
+        "boni"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
-        "damageK": { "type": "integer", "minimum": 1 },
-        "mReductionPercentPerPoint": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "def10PerPoint": { "type": "integer", "minimum": 0 },
-        "def10Cap": { "type": "integer", "minimum": 0 },
-        "damageDenominator": { "type": "integer", "minimum": 1 },
-        "dyingCounterDivisor": { "type": "integer", "minimum": 1 },
+        "source": {
+          "type": "string"
+        },
+        "damageK": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mReductionPercentPerPoint": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "def10PerPoint": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "def10Cap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "damageDenominator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dyingCounterDivisor": {
+          "type": "integer",
+          "minimum": 1
+        },
         "contentSafetyCap": {
           "type": "object",
-          "required": ["enabled", "percent"],
+          "required": [
+            "enabled",
+            "percent"
+          ],
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean" },
-            "percent": { "type": "integer", "minimum": 0, "maximum": 100 }
+            "enabled": {
+              "type": "boolean"
+            },
+            "percent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
           }
         },
         "boni": {
@@ -34,9 +88,18 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "atk10": { "type": "integer", "minimum": 0 },
-              "def10": { "type": "integer", "minimum": 0 },
-              "defTotalCap": { "type": "integer", "minimum": 0 }
+              "atk10": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "def10": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "defTotalCap": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           }
         }
@@ -44,75 +107,362 @@
     },
     "movement": {
       "type": "object",
-      "required": ["halfPointsPerPoint", "cost2", "overshootAllowance2"],
+      "required": [
+        "halfPointsPerPoint",
+        "cost2",
+        "overshootAllowance2"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
-        "halfPointsPerPoint": { "type": "integer", "minimum": 1 },
+        "source": {
+          "type": "string"
+        },
+        "halfPointsPerPoint": {
+          "type": "integer",
+          "minimum": 1
+        },
         "cost2": {
           "type": "object",
-          "required": ["road", "city", "swamp", "default"],
+          "required": [
+            "road",
+            "city",
+            "swamp",
+            "default"
+          ],
           "additionalProperties": false,
           "properties": {
-            "road": { "type": "integer", "minimum": 0 },
-            "city": { "type": "integer", "minimum": 0 },
-            "swamp": { "type": "integer", "minimum": 0 },
-            "default": { "type": "integer", "minimum": 0 }
+            "road": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "city": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "swamp": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "default": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
-        "overshootAllowance2": { "type": "integer", "minimum": 0 }
+        "overshootAllowance2": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "vision": {
       "type": "object",
-      "required": ["unitRadius", "mountainUnitRadius", "cityRadius"],
+      "required": [
+        "unitRadius",
+        "mountainUnitRadius",
+        "cityRadius"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
-        "unitRadius": { "type": "integer", "minimum": 0 },
-        "mountainUnitRadius": { "type": "integer", "minimum": 0 },
-        "cityRadius": { "type": "integer", "minimum": 0 }
+        "source": {
+          "type": "string"
+        },
+        "unitRadius": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mountainUnitRadius": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cityRadius": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "territory": {
       "type": "object",
-      "required": ["borderRadiusByLevel"],
+      "required": [
+        "borderRadiusByLevel"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
+        "source": {
+          "type": "string"
+        },
         "borderRadiusByLevel": {
           "type": "object",
-          "additionalProperties": { "type": "integer", "minimum": 0 }
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       }
     },
     "economy": {
       "type": "object",
-      "required": ["capitalBonus", "healHome", "healAway"],
+      "required": [
+        "capitalBonus",
+        "healHome",
+        "healAway"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
-        "capitalBonus": { "type": "integer", "minimum": 0 },
-        "healHome": { "type": "integer", "minimum": 0 },
-        "healAway": { "type": "integer", "minimum": 0 }
+        "source": {
+          "type": "string"
+        },
+        "capitalBonus": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "healHome": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "healAway": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "elimination": {
       "type": "object",
-      "required": ["eliminationGraceTurns"],
+      "required": [
+        "eliminationGraceTurns"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
-        "eliminationGraceTurns": { "type": "integer", "minimum": 1 }
+        "source": {
+          "type": "string"
+        },
+        "eliminationGraceTurns": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "promotion": {
       "type": "object",
-      "required": ["kills"],
+      "required": [
+        "kills"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "type": "string" },
-        "kills": { "type": "integer", "minimum": 1 }
+        "source": {
+          "type": "string"
+        },
+        "kills": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "world": {
+      "type": "object",
+      "required": [
+        "source",
+        "minMapSize",
+        "maxMapSize",
+        "terrainWeights",
+        "smoothRounds",
+        "smoothPriority",
+        "villageCount",
+        "resourceCount",
+        "resourcePlacement",
+        "spawnTerrains",
+        "minSpawnEdge",
+        "minReach",
+        "dMin",
+        "epsilon",
+        "retryCap",
+        "spawnCount",
+        "scoreRadius",
+        "wNearVillage",
+        "wResource",
+        "wMobility",
+        "wEdge",
+        "wRuin",
+        "resourceValue"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "minMapSize": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "maxMapSize": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 256
+        },
+        "terrainWeights": {
+          "type": "object",
+          "required": [
+            "plain",
+            "forest",
+            "mountain",
+            "swamp",
+            "water"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "plain": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "forest": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "mountain": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "swamp": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "water": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          }
+        },
+        "smoothRounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "smoothPriority": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "plain",
+              "forest",
+              "mountain",
+              "swamp",
+              "water"
+            ]
+          }
+        },
+        "villageCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "resourceCount": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 64
+          }
+        },
+        "resourcePlacement": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "plain",
+                "forest",
+                "mountain",
+                "swamp",
+                "water"
+              ]
+            }
+          }
+        },
+        "spawnTerrains": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "plain",
+              "forest",
+              "mountain",
+              "swamp",
+              "water"
+            ]
+          }
+        },
+        "minSpawnEdge": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "minReach": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "dMin": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "epsilon": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "retryCap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "spawnCount": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4
+        },
+        "scoreRadius": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "wNearVillage": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "wResource": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "wMobility": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "wEdge": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "wRuin": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "resourceValue": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        }
       }
     }
   }

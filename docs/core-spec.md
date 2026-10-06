@@ -307,17 +307,49 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 ### 4.6 地图生成与出生点（展开，design §2.6）
 
-**确定性**：`rng` 从 `seed` 起 splitmix64 单流推进，**消耗顺序固定**：
+**确定性与 RNG 作用域**：`generate(seed, h, w)` 内，每次**尝试 attempt t**（t 从 0 起）用 `seed_t = seed + t`（u64 回绕）**重新初始化** splitmix64 单流；该尝试内**消耗顺序固定**（下表），成功选定出生点后该流**冻结**（战斗/回合永不触碰）。所有数组遍历一律**行主序**（y 0..h-1、x 0..w-1），集合先显式排序再取用（红线：不依赖迭代序）。
 
-1. 地形与资源生成 → 2. 村庄 / 遗迹布置 → 3. 城址候选评分 → 4. 出生点公平带挑选（随机取组合从此流继续）。完成后 `rng` **冻结**（战斗不碰）。
+**消耗表（每尝试 attempt t 内）**
 
-**两段式流程**
+| # | 阶段 | 消耗 | 次数 |
+|---|---|---|---|
+| 1 | 原始地形撒点 | 每格 1 抽（行主序） | `h×w` |
+| 2 | 元胞平滑（×`smoothRounds`） | **零抽**（确定性规则） | 0 |
+| 3 | 最大连通陆块清理 | **零抽** | 0 |
+| 4 | 村庄布置 | 每村 1 抽 | 至多 `villageCount`（候选枯竭提前停） |
+| 5 | 资源布置 | 每资源 1 抽 | 至多 `Σ resourceCount`（kind 按 id 升序；候选枯竭提前停） |
+| 6 | 出生点公平带挑选 | 合法组合非空 → 1 抽 | 0 或 1（空 → 本尝试失败） |
 
-1. **自然生成**：全局统计均匀，**零镜像约束**。生成算法本身 🔶-T3 —— 未冻结前 `world/gen-*` 向量只做"同实现同指纹"对账，不做跨实现断言
-2. **枚举候选**：预置城址 + 大村庄，数量 > n（落选城址保留为中立目标）
-3. **评分** `start_value = w1×近村距离和(负向) + w2×资源价值 + w3×通行率 + w4×边缘惩罚 + w5×遗迹数`，权重全在 `balance.json`
-4. **公平带挑选**：`max(start_value) − min(start_value) ≤ ε` 且两两间距 ≥ `d_min`（均 ∈ balance）；在**所有合法组合中等概率随机取一组**；n ≤ 4 穷举，n 大按分数取簇 + 局部交换
-5. 无解 → 换 seed 重新生成（尝试上限 ∈ balance，超限**报错**而非硬塞）
+**自然生成算法体（T3 冻结；整数、零浮点、零镜像）**
+
+1. **原始撒点**：每格抽 `d = rng.u64()`，按 `balance.world.terrainWeights`（总和 1000 的整数权重）顺序累计：`d mod 1000 < 累计和` 的首个地形类胜出（取模偏差 ≤ 2⁻³⁴/格，接受并注明）。
+2. **元胞平滑** `smoothRounds` 轮（默认 2）：**Jacobi 同步更新**（每轮新值全部取自旧快照，禁就地）；新值 = 3×3 邻域（仅计图内格）内出现次数最多的地形类，**平票 → `smoothPriority` 中靠前者胜**（∈ balance，如 `mountain > water > forest > swamp > plain`）。
+3. **最大连通陆块**：非水格按 **8-邻**（切比雪夫，与移动一致）求连通分量；取**最大**分量（平票 → 行主序先遇到者，`size > best` 才替换）；分量外的陆格全部改**水**。零抽。
+4. **村庄布置**：候选 = `plain` 且未占用（行主序排序）；对每个目标村：抽 `d` → `候选[d mod |候选|]` 放置并移出候选（**每抽前重排序？否 —— 移除保持剩余列表行主序**）；候选枯竭则停止，实放数可 < 目标（**不报错**，向量钉实际数）。
+5. **资源布置**：kind 按 id 升序（`beast` → `fruit`）；候选 = 地形 ∈ `resourcePlacement[kind]` 且未被村/资源占用（行主序）；同 mod 取点法；枯竭提前停不报错。
+6. **出生点候选** C（行主序）：地形 ∈ `spawnTerrains`；距图边切比雪夫 ≥ `minSpawnEdge`；**非村庄、非资源格**；所在**连通陆地分量（含山地的全部非水格）规模 ≥ `minReach`**（防"两边一样烂"的死局角 —— 对 design 流程的唯一增补，2026-10-06 拍板）。
+7. **评分**（全整数，仅比例处用 §0 `round_half_up`）：
+
+   ```
+   start_value(c) = −w1·near(c) + w2·res(c) + w3·mob1000(c) ÷ 100 + w5·ruins(c) − w4·edgePen(c)
+   near(c)    = Σ_{v∈villages} minChebyshev(c, v)        # 无村 → 0
+   res(c)     = Σ resourceValue[kind]（chebyshev ≤ scoreRadius 内的资源）
+   mob1000(c) = round_half_up(1000 × 邻域内非水格数, 邻域内图内格数)   # 邻域 = scoreRadius 切比雪夫、地图裁剪
+   edgePen(c) = max(0, scoreRadius − minChebyshevToBorder(c))
+   ruins(c)   = 0   # v1 无遗迹载体（T7），公式槽保留、w5 恒 0
+   ```
+   权重 `w1..w5`、`scoreRadius` 全 ∈ `balance.world`；`mob1000 ÷ 100` 为整数除法（向零截断，值域 0..10×w3）。
+8. **公平带挑选**：取 `spawnCount`（v1 = 2，∈ [2,4]）元组合 —— 按**索引递增的字典序**枚举（基于行主序候选表）；合法条件：两两切比雪夫 ≥ `dMin` 且 `max(start_value) − min(start_value) ≤ ε`。合法组合非空 → **抽 1 次 `idx = rng.u64() mod |组合s|`，选 `组合s[idx]`**（带内等概率：公平由约束保证、不可预测由随机保证，v1 接受取模偏差）；出生点输出按行主序排序。`|C| < spawnCount` 或无合法组合 → **本尝试失败**。
+9. **重试与终态**：失败 → `t+1`，`seed_{t} = seed + t`；`t` 超过 `balance.world.retryCap` → 返回 `{ ok:false, reason: "world: 公平带无解（重试超限）" }`（**报错而非硬塞**，design §2.6-5）。成功 → `{ ok:true, terrain, villages, resources, spawns, attempts = t+1, startValues, rngFinal }`（`rngFinal` = 成功尝试消耗完毕后的流状态，u64 十六 hex 小写）。
+10. **参数**（`balance.world`，初值**待 sim 校准** = D10 的活）：`terrainWeights / smoothRounds / smoothPriority / villageCount / resourceCount / resourcePlacement / spawnTerrains / minSpawnEdge / minReach / dMin / epsilon / retryCap / spawnCount / scoreRadius / wNearVillage / wResource / wMobility / wEdge / wRuin / resourceValue / minMapSize / maxMapSize`。
+
+**两段式流程（design §2.6 v0.7，保持不变）**
+
+1. **自然生成**：全局统计均匀，**零镜像约束**（对称图被否：对手可从自己半区反推地形，情报战失效 —— design §4.2.4）。算法体已按上文冻结 → `world/gen-*` **可做跨实现断言**
+2. **枚举候选**：城址候选 = 步骤 6 合法格（数量通常 > n；落选候选保留为普通地形）
+3. **评分**：步骤 7 公式，权重全在 `balance.json`
+4. **公平带挑选**：步骤 8（`≤ ε` + `≥ dMin` + 带内等概率随机）
+5. 无解 → 换 seed 重新生成（步骤 9，尝试上限 ∈ balance，超限**报错**而非硬塞）
 
 **验收**：`sim` 换座胜率差 ≤ ±5%、公平带生成成功率（design §6.2 指标面板）。
 
@@ -500,6 +532,31 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - 收入、治疗等常数来自 `balance`（§4.3 `capitalBonus`），夹具不重复声明
 - 拒绝路径（谓词不通过）与正常路径同格式：`rejected: true` 时其余字段全不校验
 
+#### world 型 given（`fixture: "worldGen"`，T3）
+
+```json
+{
+  "id": "world/gen-10x10-seed0",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.6（自然生成 + 公平带挑选）",
+  "given": { "fixture": "worldGen", "seed": 0, "h": 10, "w": 10, "world": {} },
+  "expect": {
+    "ok": true,
+    "attempts": 1,
+    "terrain": ["……h 行图例字符串，每行 w 字符（§6 图例 . f m s w）……"],
+    "villages": [[1, 2]],
+    "resources": [[0, 1, "fruit"]],
+    "spawns": [[2, 3], [7, 6]],
+    "startValues": [12, 9],
+    "rngFinal": "0123456789abcdef"
+  }
+}
+```
+
+- `given.world` = `balance.world` 的**局部覆盖**（缺省键回落 balance；`{}` = 全用 balance）—— 供向量构造极端场景（如 `retryCap` 小、`dMin` 巨大 → 逼出失败路径）；**seed/h/w 必填**
+- `expect`：`ok:false` 时只断言 `ok`、`reason`（`attempts = retryCap + 1` 可选断言）；`ok:true` 时 `terrain` 全图、`villages`/`resources`/`spawns` 完整集（坐标 `[y,x]` 升序；resources 按 `[y,x,kind]` 升序）、`startValues` 按 spawns 序、`rngFinal` = 成功尝试流终态 u64 十六 hex 小写
+- 地形/村庄/资源断言的是**生成终态**（平滑与陆块清理之后），不是原始撒点
+
 ### 6.2 向量纪律
 
 1. 数值**由规格手算或推导**（design §3.7 / core-spec §4.1.C），**禁止由实现反向生成**（防循环论证）。
@@ -531,7 +588,8 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 | T1 领地 / 边界扩张模型 | spec | ✅ **已拍板（方案 C · 动态）**：半径随等级 `ceil(level/2)` + 最近城市归属 + 道路可修中立地（§4.3） |
 | T1a 扩边限制（半径上限 / 增速） | spec | ⏸ 用户："也许加点限制但以后再说" —— 到时只改上限规则与 `borderRadiusByLevel`，**不动谓词** |
 | T2 训练占格与强制推挤 | spec | 🔶 design 未覆盖 —— v1 建议"城上格被占不可训练"，推挤机制后置 |
-| T3 地图生成算法规格 | spec | 🔶 design §2.6 只定了流程与挑选；地形合成算法单独规格后，`world/gen-*` 才可做跨实现断言 |
+| T3 地图生成算法规格 | spec | ✅ **已冻结（2026-10-06，用户"先按推荐来"）**：§4.6 算法体 —— 整数撒点 + Jacobi 元胞平滑×2 + 最大连通陆块 + mod 取点布置 + `start_value` 评分（`rhu` 比例）+ 公平带内 `mod |组合s|` 等概率取组 + `seed+t` 重试（超限返回错误）；对称方案依 design v0.7 否决；`balance.world` 初值待 sim 校准（D10）；`world/gen-*` **可做跨实现断言** |
 | T4 淘汰（英雄无敌 3 式宽限） | spec | ✅ **已拍板**：残兵无城期间保留**不依赖领地**的能力（移动/攻击/治疗；采集、建造随领地归零自然不可用）；连续无城 `eliminationGraceTurns`（默认 5，balance）未占任何城才判负、占城清零；淘汰时移除残兵（§4.7）。**实现待接**：`state.noCityTurns`、endTurn 计数、不变量与单测同步 |
 | T5 分数公式与同分 tie-break | spec | ⏸ **低优先**（用户："分数意义不大"）—— 沙盒为当前主玩法、征服模式已有；首接触奖励（3–12★）同级后置 |
 | T6 投石 `canAttackAfterMove` | spec | ✅ **已拍板**：架设型（投石）移动后不可攻击 —— 字段默认 `true`、投石 `false`（§4.1-G） |
+| T7 遗迹载体（ruins） | spec | ⏸ **后置**（2026-10-06）：State tiles 无 ruins 字段、内容无遗迹定义 —— §4.6 评分公式保留 `w5·ruins` 槽位（v1 恒 0，`wRuin=0`）；立项时补 tiles 字段 + 生成阶段 + `resourceValue` 类参数 |

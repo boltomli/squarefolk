@@ -7,21 +7,47 @@
     "def10Cap": 50,
     "damageDenominator": 2000,
     "dyingCounterDivisor": 4,
-    "contentSafetyCap": { "enabled": false, "percent": 85 },
+    "contentSafetyCap": {
+      "enabled": false,
+      "percent": 85
+    },
     "boni": {
-      "terrain_forest": { "def10": 10 },
-      "terrain_mountain": { "def10": 10 },
-      "city": { "def10": 10 },
-      "wall": { "def10": 20 },
-      "stance_defensive": { "def10": 10 },
-      "support_each": { "def10": 5, "defTotalCap": 15 },
-      "flank": { "atk10": 10 },
-      "promotion": { "atk10": 10, "def10": 10 }
+      "terrain_forest": {
+        "def10": 10
+      },
+      "terrain_mountain": {
+        "def10": 10
+      },
+      "city": {
+        "def10": 10
+      },
+      "wall": {
+        "def10": 20
+      },
+      "stance_defensive": {
+        "def10": 10
+      },
+      "support_each": {
+        "def10": 5,
+        "defTotalCap": 15
+      },
+      "flank": {
+        "atk10": 10
+      },
+      "promotion": {
+        "atk10": 10,
+        "def10": 10
+      }
     }
   },
   "movement": {
     "halfPointsPerPoint": 2,
-    "cost2": { "road": 1, "city": 1, "swamp": 3, "default": 2 },
+    "cost2": {
+      "road": 1,
+      "city": 1,
+      "swamp": 3,
+      "default": 2
+    },
     "overshootAllowance2": 1
   },
   "vision": {
@@ -32,7 +58,14 @@
   },
   "territory": {
     "source": "docs/core-spec.md §4.3 行 252（radius(city) = ceil(level ÷ 2)，默认表逐级可改）",
-    "borderRadiusByLevel": { "1": 1, "2": 1, "3": 2, "4": 2, "5": 3, "6": 3 }
+    "borderRadiusByLevel": {
+      "1": 1,
+      "2": 1,
+      "3": 2,
+      "4": 2,
+      "5": 3,
+      "6": 3
+    }
   },
   "economy": {
     "source": "docs/core-spec.md §4.3 行 228（capitalBonus 基线 1）/ §2 行 66（heal：本土 +4、境外 +2，上限截断）",
@@ -47,5 +80,59 @@
   "promotion": {
     "source": "docs/core-spec.md §4.1 行 172（晋升计数满 promotion.kills（配置，默认 3）→ promoted）",
     "kills": 3
+  },
+  "world": {
+    "source": "docs/core-spec.md §4.6（T3 冻结 2026-10-06）；初值按 demo 手工图手感反推，**待 sim 校准（D10）**",
+    "minMapSize": 4,
+    "maxMapSize": 64,
+    "terrainWeights": {
+      "water": 150,
+      "plain": 420,
+      "forest": 180,
+      "swamp": 100,
+      "mountain": 150
+    },
+    "smoothRounds": 2,
+    "smoothPriority": [
+      "mountain",
+      "water",
+      "forest",
+      "swamp",
+      "plain"
+    ],
+    "villageCount": 4,
+    "resourceCount": {
+      "beast": 2,
+      "fruit": 4
+    },
+    "resourcePlacement": {
+      "beast": [
+        "plain",
+        "forest"
+      ],
+      "fruit": [
+        "plain"
+      ]
+    },
+    "spawnTerrains": [
+      "plain",
+      "forest"
+    ],
+    "minSpawnEdge": 1,
+    "minReach": 12,
+    "dMin": 4,
+    "epsilon": 10,
+    "retryCap": 32,
+    "spawnCount": 2,
+    "scoreRadius": 3,
+    "wNearVillage": 4,
+    "wResource": 3,
+    "wMobility": 2,
+    "wEdge": 3,
+    "wRuin": 0,
+    "resourceValue": {
+      "fruit": 3,
+      "beast": 2
+    }
   }
 }
