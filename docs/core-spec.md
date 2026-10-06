@@ -422,6 +422,12 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - [ ] 征服触发：占领最后一座敌首都 → `winner`（T4 不豁免）→ `turn/capture-conquest`
 - [ ] 城防 +2 条件（被围城防失效 + 墙在/不在成对）→ ✅ `turn/wall-city-def-bonus`（def40→3）+ ✅ `turn/city-def-no-wall`（def20→5）
 
+### 枚举与 bot（§8，✅ = 向量已落地）
+
+- [ ] 完备性 + 排序（move→attack→train→endTurn 表序、同 type 内载荷元组字典序、同格 move 不入域）→ ✅ `legal/basic-ordered`
+- [ ] 闸门排除（stars 不足 → train/research 不出现；hp 满 → heal 不出现）+ 跨 type 排序 → ✅ `legal/gated-excluded`
+- [ ] soundness 性质（既有夹具集上列表逐条 apply 必过）与 bot 确定性（同 seed 复现、L1 层序）→ 单测
+
 ### 状态与日志
 
 - [ ] `actionLog.seq` 连续无洞；重复 `endTurn` 拒绝；已提交后再收动作拒绝
@@ -584,6 +590,10 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - `expect`：`ok:false` 时只断言 `ok`、`reason`（`attempts = retryCap + 1` 可选断言）；`ok:true` 时 `terrain` 全图、`villages`/`resources`/`spawns` 完整集（坐标 `[y,x]` 升序；resources 按 `[y,x,kind]` 升序）、`startValues` 按 spawns 序、`rngFinal` = 成功尝试流终态 u64 十六 hex 小写
 - 地形/村庄/资源断言的是**生成终态**（平滑与陆块清理之后），不是原始撒点
 
+#### legalActions 型 given（`fixture: "legalActions"`）
+
+布局字段同 action 型 given（**无 `action` 键**）；`expect` 仅一个字段：`legalActions` = 该局面 `legalActions(state, ctx)` 返回的**全量精确数组**（钉完备性 + 排序，§8.1）。逐元素**深度等值**比较（键序无关）；断言 `legalActions.length` 与每条动作对象完全相等，无遗漏无多余。
+
 ### 6.2 向量纪律
 
 1. 数值**由规格手算或推导**（design §3.7 / core-spec §4.1.C），**禁止由实现反向生成**（防循环论证）。
@@ -601,6 +611,47 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - `rulesVersion` 变更 → 旧回放必须用对应版本实现才能复现（回放头部记录）
 - `schemaVersion` 变更 → 数据需迁移函数
 - 语义化：破坏规则语义 = minor+1（1.0 前）；纯内容数值调整不改 `rulesVersion`，只改 `contentHash`
+
+## 8. 合法动作枚举与 bot（API 层，非规则）
+
+> 枚举器是 §2 谓词的**镜像出口**（供 bot 与 sim 消费）；bot 是策略层（分层优先级**不是** balance 值，不入 data）。二者同受确定性红线：同输入 → 同输出，无 I/O、无系统时间、无真随机。
+
+### 8.1 `legalActions(state, ctx, options?) → Action[]`
+
+签名与 `applyAction` **完全同形**（`ctx` = 同一 `ActionContext`，`options.explored` 同一迷雾语义 —— 过滤时原样透传）。
+
+- **可靠性（soundness）**：返回的每个动作经 `applyAction(state, a, ctx)` 必 `rejected: false`（同一 ctx 语义，含迷雾）。
+- **完备性（completeness，定义在候选生成域上）**：§2 谓词可执行且落在下列候选域内的动作必在列表。**唯一实现路径 = 有界候选生成 + `applyAction` 过滤 —— 枚举器禁止复制 §2 谓词逻辑**（单一事实来源）：
+
+| type | 候选生成 |
+| --- | --- |
+| move | 每个 `!moved` 单位的 `reachable(unit) \ {起点}`（同格 move v1 不入域 —— §2 未钉，已知边缘） |
+| attack | 每个可攻击单位 × （图内每个敌方单位 + 切比雪夫 ≤ `range` 的每个敌方城） |
+| train | 每个本方城 × 每个 `unitTypes` 条目 |
+| harvest | 每个单位（apply 滤资源 / 领土 / 科技） |
+| build | 每个单位 × 每个 `improvementTypes` 条目 |
+| research | `techs` 数据中每个**未研究** `techId` |
+| upgradeCity | 每个本方城 × `choice ∈ {workshop, stars5, wall}` |
+| heal | 每个单位（apply 滤 hp / flag） |
+| endTurn | 恒 1 个（phase 前置由 apply 把关） |
+
+- **排序（确定性红线）**：`type` 按 §2 表行序（move → attack → train → harvest → build → research → upgradeCity → heal → endTurn，endTurn 恒最后）；同 type 内按载荷元组字典序（主 id `unitId|cityId|techId` → `x` → `y` → `targetId` → `unitType` → `kind` → `choice`）。比较 = 深度等值（键序无关）。
+- `phase = act` 下列表恒非空（至少含 `endTurn`）。
+
+### 8.2 `botAction(state, ctx, options?, seed, level) → Action | null`
+
+`ctx`/`options` 透传给 `legalActions`（同 8.1）。
+
+- **确定性**：同 `(state, ctx, seed, level)` → 同动作。`seed` = 非负整数 ≤ 2^53−1；底层 splitmix64（§4.6 同一实现，取一步 value），**无真随机、无时间**。
+- **L0**：`index = Number(value mod |actions|)` 全列表取模。
+- **L1（v1 demo 默认）**：分层优先级，**层内回落 L0 的 seed 选择**（策略约定，非规则、不入 balance）：
+  1. 占领型 move（目标格 `cityId` → 非己方城，或 `villageId` 非空）
+  2. attack（含 `targetId = cityId` 攻城）
+  3. harvest → 4. train → 5. build → 6. upgradeCity → 7. research → 8. heal
+  9. 其余 move → 10. endTurn
+- bot 不做前瞻、不读 `state` 与 `ctx` 之外的数据；层非空即在层内选，空层跳过。
+
+**验收**：`legal/` 域 2 向量（完备 + 排序 + 闸门）+ 单测（既有夹具集逐条 apply 必过；L0 同 seed 复现；L1 层序偏好）。
 
 ## 附录：未定项索引（实施期必须逐个关闭）
 

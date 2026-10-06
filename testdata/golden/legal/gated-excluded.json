@@ -1,0 +1,191 @@
+{
+  "id": "legal/gated-excluded",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §8.1 闸门排除（stars → train/research）+ 跨 type 排序（…attack→heal→endTurn）",
+  "given": {
+    "fixture": "legalActions",
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 5,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": null,
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      },
+      {
+        "id": "unit.000002",
+        "owner": "B",
+        "type": "unit.warrior",
+        "x": 1,
+        "y": 2,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": null,
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 2,
+        "y": 2,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 0,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      }
+    },
+    "improvementTypes": {},
+    "techs": {
+      "tech.hunt": {
+        "tier": 1,
+        "requires": []
+      }
+    },
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act"
+  },
+  "expect": {
+    "legalActions": [
+      {
+        "type": "move",
+        "unitId": "unit.000001",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "type": "move",
+        "unitId": "unit.000001",
+        "x": 0,
+        "y": 2
+      },
+      {
+        "type": "move",
+        "unitId": "unit.000001",
+        "x": 1,
+        "y": 0
+      },
+      {
+        "type": "move",
+        "unitId": "unit.000001",
+        "x": 1,
+        "y": 1
+      },
+      {
+        "type": "move",
+        "unitId": "unit.000001",
+        "x": 2,
+        "y": 0
+      },
+      {
+        "type": "move",
+        "unitId": "unit.000001",
+        "x": 2,
+        "y": 1
+      },
+      {
+        "type": "attack",
+        "unitId": "unit.000001",
+        "targetId": "unit.000002"
+      },
+      {
+        "type": "heal",
+        "unitId": "unit.000001"
+      },
+      {
+        "type": "endTurn"
+      }
+    ]
+  },
+  "notes": "同 basic-ordered 布局，改三处钉闸门：① stars 0 → train（cost5）被 apply 拒 → 不出现 ② stars 0 → research(tech.hunt cost = tier1×A城数1 + 4 = 5 > stars 0) 被拒 → 候选生成后滤除、不出现 ③ u1 hp5<10 → heal 出现，位次在 upgradeCity 之后、endTurn 之前（跨 type 排序）。move 集不变（6）、attack 保留 → 9 条变 8 条"
+}

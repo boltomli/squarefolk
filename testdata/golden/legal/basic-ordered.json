@@ -1,0 +1,40 @@
+{
+  "id": "legal/basic-ordered",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §8.1 候选生成域 + 排序（§2 表序 + 载荷元组字典序）+ §6.1 legalActions fixture",
+  "given": {
+    "fixture": "legalActions",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 1, "y": 2, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "siegeDamage": 1 } },
+    "improvementTypes": {},
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act"
+  },
+  "expect": {
+    "legalActions": [
+      { "type": "move", "unitId": "unit.000001", "x": 0, "y": 0 },
+      { "type": "move", "unitId": "unit.000001", "x": 0, "y": 2 },
+      { "type": "move", "unitId": "unit.000001", "x": 1, "y": 0 },
+      { "type": "move", "unitId": "unit.000001", "x": 1, "y": 1 },
+      { "type": "move", "unitId": "unit.000001", "x": 2, "y": 0 },
+      { "type": "move", "unitId": "unit.000001", "x": 2, "y": 1 },
+      { "type": "attack", "unitId": "unit.000001", "targetId": "unit.000002" },
+      { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" },
+      { "type": "endTurn" }
+    ]
+  },
+  "notes": "手推：u1 (0,1) move2 全 3×3 可达 8 格 − 起点 − (1,2) 被 u2 占 − (2,2) 敌城非相邻起点（占领门拒）= 6 move，同 type 按 (unitId,x,y) 字典序：(0,0)(0,2)(1,0)(1,1)(2,0)(2,1)；attack：u2 (1,2) cheb1 ≤ range1 可见（§6 缺省全图已探索）→ 1；train：c1 属 A、无相邻敌（u2 距 (0,0) = 2 不被围）、驻留 0、stars5 ≥ cost5 → 1；harvest/build/research/upgradeCity/heal 全空（无资源、improvementTypes {}、techs {}、pop0 < level+1、hp 满）；endTurn 恒 1。表序 move→attack→train→endTurn"
+}
