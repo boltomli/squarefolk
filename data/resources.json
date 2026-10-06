@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.1.0",
+  "resources": {
+    "fruit": { "effect": "pop", "amount": 1, "tech": "tech.orchard" },
+    "beast": { "effect": "stars", "amount": 2, "tech": "tech.hunt" }
+  }
+}

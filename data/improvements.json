@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.1.0",
+  "improvements": {
+    "improvement.farm": { "cost": 5, "allowedOn": ["plain", "swamp"], "tech": "tech.orchard", "yield": { "kind": "pop", "perTurn": 1 } },
+    "improvement.mine": { "cost": 5, "allowedOn": ["mountain"], "tech": "tech.mining", "yield": { "kind": "stars", "perTurn": 2 } },
+    "improvement.road": { "cost": 3, "allowedOn": ["plain", "forest", "swamp"] }
+  }
+}

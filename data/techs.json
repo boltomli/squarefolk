@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.1.0",
+  "techs": {
+    "tech.orchard": { "tier": 1, "requires": [] },
+    "tech.hunt": { "tier": 1, "requires": [] },
+    "tech.mining": { "tier": 1, "requires": [] },
+    "tech.steel": { "tier": 2, "requires": ["tech.hunt"] }
+  }
+}

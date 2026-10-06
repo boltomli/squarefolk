@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "squarefolk/data/balance.schema.json",
+  "title": "Squarefolk rules layer: balance.json（结构校验：类型 / 必填 / 枚举 / 区间）",
+  "type": "object",
+  "required": ["schemaVersion", "combat", "movement", "vision", "territory", "economy", "elimination", "promotion"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "combat": {
+      "type": "object",
+      "required": ["damageK", "mReductionPercentPerPoint", "def10PerPoint", "def10Cap", "damageDenominator", "dyingCounterDivisor", "contentSafetyCap", "boni"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "damageK": { "type": "integer", "minimum": 1 },
+        "mReductionPercentPerPoint": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "def10PerPoint": { "type": "integer", "minimum": 0 },
+        "def10Cap": { "type": "integer", "minimum": 0 },
+        "damageDenominator": { "type": "integer", "minimum": 1 },
+        "dyingCounterDivisor": { "type": "integer", "minimum": 1 },
+        "contentSafetyCap": {
+          "type": "object",
+          "required": ["enabled", "percent"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "percent": { "type": "integer", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "boni": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "atk10": { "type": "integer", "minimum": 0 },
+              "def10": { "type": "integer", "minimum": 0 },
+              "defTotalCap": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "movement": {
+      "type": "object",
+      "required": ["halfPointsPerPoint", "cost2", "overshootAllowance2"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "halfPointsPerPoint": { "type": "integer", "minimum": 1 },
+        "cost2": {
+          "type": "object",
+          "required": ["road", "city", "swamp", "default"],
+          "additionalProperties": false,
+          "properties": {
+            "road": { "type": "integer", "minimum": 0 },
+            "city": { "type": "integer", "minimum": 0 },
+            "swamp": { "type": "integer", "minimum": 0 },
+            "default": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "overshootAllowance2": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "vision": {
+      "type": "object",
+      "required": ["unitRadius", "mountainUnitRadius", "cityRadius"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "unitRadius": { "type": "integer", "minimum": 0 },
+        "mountainUnitRadius": { "type": "integer", "minimum": 0 },
+        "cityRadius": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "territory": {
+      "type": "object",
+      "required": ["borderRadiusByLevel"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "borderRadiusByLevel": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "economy": {
+      "type": "object",
+      "required": ["capitalBonus", "healHome", "healAway"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "capitalBonus": { "type": "integer", "minimum": 0 },
+        "healHome": { "type": "integer", "minimum": 0 },
+        "healAway": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "elimination": {
+      "type": "object",
+      "required": ["eliminationGraceTurns"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "eliminationGraceTurns": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "required": ["kills"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "kills": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

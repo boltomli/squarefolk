@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "squarefolk/data/units.schema.json",
+  "title": "Squarefolk content layer: units.json",
+  "type": "object",
+  "required": ["schemaVersion", "rulesVersion", "units"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "rulesVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "units": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cost", "hp", "atk10", "def10", "move", "range", "counter"],
+        "additionalProperties": false,
+        "properties": {
+          "cost": { "type": "integer", "minimum": 0 },
+          "hp": { "type": "integer", "minimum": 1 },
+          "atk10": { "type": "integer", "minimum": 0 },
+          "def10": { "type": "integer", "minimum": 0 },
+          "move": { "type": "integer", "minimum": 1 },
+          "range": { "type": "integer", "minimum": 1 },
+          "counter": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+          "canAttackAfterMove": { "type": "boolean" },
+          "killSwap": { "type": "boolean" },
+          "tech": { "type": "string", "pattern": "^\\w+\\.\\w+$" }
+        }
+      }
+    }
+  }
+}

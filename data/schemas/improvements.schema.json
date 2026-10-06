@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "squarefolk/data/improvements.schema.json",
+  "title": "Squarefolk content layer: improvements.json",
+  "type": "object",
+  "required": ["schemaVersion", "rulesVersion", "improvements"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "rulesVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "improvements": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cost", "allowedOn"],
+        "additionalProperties": false,
+        "properties": {
+          "cost": { "type": "integer", "minimum": 0 },
+          "allowedOn": { "type": "array", "items": { "type": "string" } },
+          "tech": { "type": "string", "pattern": "^\\w+\\.\\w+$" },
+          "yield": {
+            "type": "object",
+            "required": ["kind", "perTurn"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["pop", "stars"] },
+              "perTurn": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

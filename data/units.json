@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.1.0",
+  "units": {
+    "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] },
+    "unit.scout": { "cost": 3, "hp": 10, "atk10": 15, "def10": 10, "move": 3, "range": 1, "counter": [1, 1] },
+    "unit.knight": { "cost": 6, "hp": 10, "atk10": 30, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "tech": "tech.steel" }
+  }
+}

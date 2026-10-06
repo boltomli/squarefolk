@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "squarefolk/data/techs.schema.json",
+  "title": "Squarefolk content layer: techs.json",
+  "type": "object",
+  "required": ["schemaVersion", "rulesVersion", "techs"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "rulesVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "techs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["tier", "requires"],
+        "additionalProperties": false,
+        "properties": {
+          "tier": { "type": "integer", "minimum": 1 },
+          "requires": { "type": "array", "items": { "type": "string", "pattern": "^\\w+\\.\\w+$" } }
+        }
+      }
+    }
+  }
+}

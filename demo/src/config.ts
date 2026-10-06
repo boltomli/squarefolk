@@ -1,9 +1,15 @@
 /**
- * demo 内容数据（design §6 数据五层的 content 层，随 demo 内联；不入库 balance.json）。
+ * demo 装配层（design §6 数据五层的 content 层）：唯一事实源 = data/*.json，
+ * 本文件只做装配与表现层文案（esbuild 把 JSON 一并内联 → 单文件零外链不变）。
  * 三件套边界：本文件只提供 applyAction 的 ActionContext 与表现层文案；
  * 规则判定一律由 core 执行（AGENTS.md 红线 2、任务约束「UI 不实现任何规则」）。
+ * 数据正确性由 `npm run validate` / `tools/validate.mjs` 把关（schema + 交叉引用）。
  */
 import type { ActionContext } from '../../core/src/actions';
+import improvementsData from '../../data/improvements.json';
+import resourcesData from '../../data/resources.json';
+import techsData from '../../data/techs.json';
+import unitsData from '../../data/units.json';
 
 /** 沙盒初始 ⭐（玩家单人一方） */
 export const START_STARS = 5;
@@ -29,24 +35,44 @@ export const CITY_PALETTE: readonly { color: string; tag: string }[] = [
   { color: '#ff6b6b', tag: 'H' },
 ];
 
-/** 兵种 / 科技 / 资源：ids 与持久化约定一致（字符串 id，禁枚举整数） */
+/**
+ * 兵种 / 科技 / 资源 / 改善：ids 与持久化约定一致（字符串 id，禁枚举整数）。
+ * JSON 推断的宽化类型（counter 元组、effect/yield.kind 枚举字面量）由 data/schemas +
+ * tools/validate.mjs 在数据侧把关；遍历序 = JSON 文件显式序（红线 3）。
+ */
+const unitTypes: ActionContext['unitTypes'] = {};
+for (const [id, raw] of Object.entries(unitsData.units)) {
+  const u = raw as {
+    cost: number;
+    hp: number;
+    atk10: number;
+    def10: number;
+    move: number;
+    range: number;
+    counter: number[];
+    canAttackAfterMove?: boolean;
+    killSwap?: boolean;
+    tech?: string;
+  };
+  unitTypes[id] = {
+    cost: u.cost,
+    hp: u.hp,
+    atk10: u.atk10,
+    def10: u.def10,
+    move: u.move,
+    range: u.range,
+    counter: [u.counter[0], u.counter[1]],
+    ...(u.canAttackAfterMove !== undefined ? { canAttackAfterMove: u.canAttackAfterMove } : {}),
+    ...(u.killSwap !== undefined ? { killSwap: u.killSwap } : {}),
+    ...(u.tech !== undefined ? { tech: u.tech } : {}),
+  };
+}
+
 export const CONTENT: ActionContext = {
-  unitTypes: {
-    'unit.warrior': { cost: 5, hp: 10, atk10: 20, def10: 20, move: 2, range: 1, counter: [1, 1] },
-    'unit.scout': { cost: 3, hp: 10, atk10: 15, def10: 10, move: 3, range: 1, counter: [1, 1] },
-    'unit.knight': { cost: 6, hp: 10, atk10: 30, def10: 20, move: 2, range: 1, counter: [1, 1], tech: 'tech.steel' },
-  },
-  techs: {
-    'tech.orchard': { tier: 1, requires: [] },
-    'tech.hunt': { tier: 1, requires: [] },
-    'tech.steel': { tier: 2, requires: ['tech.hunt'] },
-  },
-  resources: {
-    fruit: { effect: 'pop', amount: 1, tech: 'tech.orchard' },
-    beast: { effect: 'stars', amount: 2, tech: 'tech.hunt' },
-  },
-  // demo 无建设 UI → 无改善类型（core 谓词对未知 kind 拒绝，不发数）
-  improvementTypes: {},
+  unitTypes,
+  techs: techsData.techs as ActionContext['techs'],
+  resources: resourcesData.resources as ActionContext['resources'],
+  improvementTypes: improvementsData.improvements as ActionContext['improvementTypes'],
 };
 
 /** 展示序（红线 3：显式排序，不依赖对象/哈希迭代序） */
