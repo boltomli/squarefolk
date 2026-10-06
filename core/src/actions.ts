@@ -886,3 +886,166 @@ function captureEnemyCity(state: State, unit: Unit, city: City): void {
   city.wallDurability = 0;
   state.players[unit.owner].noCityTurns = 0;
 }
+
+// ── §8.1 legalActions（唯一路径：有界候选生成 → 逐条 applyAction 过滤 → §8.1 排序） ──
+
+/** §8.1 排序：type 按 §2 表行序（move → … → heal → endTurn，endTurn 恒最后） */
+const ACTION_TYPE_ORDER: readonly string[] = [
+  'move',
+  'attack',
+  'train',
+  'harvest',
+  'build',
+  'research',
+  'upgradeCity',
+  'heal',
+  'endTurn',
+];
+
+function actionTypeRank(type: string): number {
+  const index = ACTION_TYPE_ORDER.indexOf(type);
+  return index === -1 ? ACTION_TYPE_ORDER.length : index;
+}
+
+/**
+ * §8.1 同 type 载荷元组字典序：主 id（unitId | cityId | techId）→ x → y → targetId → unitType
+ * → kind → choice。缺席字段取同 type 内一致的哨兵（数字 −1 / 空串）；跨 type 由 typeRank 先分档。
+ */
+function actionSortKey(action: Action): (string | number)[] {
+  return [
+    action.unitId ?? action.cityId ?? action.techId ?? '',
+    action.x ?? -1,
+    action.y ?? -1,
+    action.targetId ?? '',
+    action.unitType ?? '',
+    action.kind ?? '',
+    action.choice ?? '',
+  ];
+}
+
+function compareActions(a: Action, b: Action): number {
+  const rank = actionTypeRank(a.type) - actionTypeRank(b.type);
+  if (rank !== 0) return rank;
+  const ka = actionSortKey(a);
+  const kb = actionSortKey(b);
+  for (let i = 0; i < ka.length; i += 1) {
+    const va = ka[i];
+    const vb = kb[i];
+    if (typeof va === 'number' && typeof vb === 'number') {
+      if (va !== vb) return va < vb ? -1 : 1;
+    } else {
+      const sa = String(va);
+      const sb = String(vb);
+      if (sa !== sb) return sa < sb ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
+/**
+ * §8.1 `legalActions` —— 枚举器是 §2 谓词的镜像出口。**唯一实现路径** = 有界候选生成
+ * （下表，域内不含谓词判定）+ 逐条 `applyAction` 过滤（`options` 原样透传，后继态丢弃）
+ * + §8.1 排序；枚举器**不复制 §2 谓词逻辑**（过滤判定唯一来源 = applyAction）。
+ *
+ * 候选生成域（§8.1 表）：
+ * - move：每个 `!moved` 单位 × `reachable(unit) \ {起点}`（同格 move v1 不入域）
+ * - attack：每个可攻击单位（本方 ∧ `!attacked` ∧ `!healed`；架设型/射程/可见留给 apply）×
+ *   （图内每个敌方单位 + 切比雪夫 ≤ `range` 的每个敌方城）
+ * - train：每个本方城 × 每个 `unitTypes` 条目
+ * - harvest / build / heal：每个单位（build 另 × 每个 `improvementTypes` 条目）
+ * - research：`techs` 数据中每个未研究 `techId`
+ * - upgradeCity：每个本方城 × `choice ∈ {workshop, stars5, wall}`
+ * - endTurn：恒 1 个（phase 前置由 apply 把关 → 非 act 时列表为空）
+ *
+ * 确定性：候选枚举顺序 = state 数组存储序 / content 键序，且排序键在候选域内唯一
+ * （无并列）→ 输出与枚举顺序无关；纯函数，无随机 / 时间 / I/O（AGENTS 红线 1）。
+ */
+export function legalActions(state: State, ctx: ActionContext, options?: ApplyOptions): Action[] {
+  const actor = state.currentPlayer;
+  const player = state.players[actor];
+  const candidates: Action[] = [];
+
+  // move：每个 !moved 单位（本方与敌方均入候选 —— §8.1 表字面「每个」，apply 过滤本方）
+  const idleUnits = state.units.filter((unit) => !unit.moved);
+  if (idleUnits.length > 0) {
+    const mapFixture = mapFixtureOf(state, options?.explored ?? null);
+    const occupancy = state.units.map((other) => ({
+      id: other.id,
+      owner: String(other.owner),
+      x: other.x,
+      y: other.y,
+      move: ctx.unitTypes[other.type]?.move ?? 0,
+    }));
+    for (const unit of idleUnits) {
+      const typeDef = ctx.unitTypes[unit.type];
+      if (typeDef === undefined) continue; // 内容损坏 → 无候选（apply 侧 requireUnitType 抛错）
+      const dests = reachable(
+        { id: unit.id, owner: String(unit.owner), x: unit.x, y: unit.y, move: typeDef.move },
+        mapFixture,
+        occupancy,
+      );
+      for (const dest of dests) {
+        if (dest.x === unit.x && dest.y === unit.y) continue; // \ {起点}（同格 move 不入域）
+        candidates.push({ type: 'move', unitId: unit.id, x: dest.x, y: dest.y });
+      }
+    }
+  }
+
+  // attack：每个可攻击单位 ×（图内每个敌方单位 + 切比雪夫 ≤ range 的每个敌方城）
+  for (const attacker of state.units) {
+    if (attacker.owner !== actor || attacker.attacked || attacker.healed) continue;
+    const typeDef = requireUnitType(ctx, attacker.type); // 本方攻击方类型缺失 = 内容损坏 → 抛错（同 apply）
+    if (!isInt(typeDef.range)) throw new Error(`unitTypes[${attacker.type}].range 非法`);
+    for (const target of state.units) {
+      if (target.owner === actor) continue;
+      candidates.push({ type: 'attack', unitId: attacker.id, targetId: target.id });
+    }
+    for (const city of state.cities) {
+      if (city.owner === actor) continue;
+      if (chebyshev(attacker.x, attacker.y, city.x, city.y) > typeDef.range) continue;
+      candidates.push({ type: 'attack', unitId: attacker.id, targetId: city.id });
+    }
+  }
+
+  // train：每个本方城 × 每个 unitTypes 条目
+  for (const city of state.cities) {
+    if (city.owner !== actor) continue;
+    for (const unitType of Object.keys(ctx.unitTypes)) {
+      candidates.push({ type: 'train', cityId: city.id, unitType });
+    }
+  }
+
+  // harvest / heal：每个单位；build：每个单位 × 每个 improvementTypes 条目
+  for (const unit of state.units) {
+    candidates.push({ type: 'harvest', unitId: unit.id });
+    candidates.push({ type: 'heal', unitId: unit.id });
+    for (const kind of Object.keys(ctx.improvementTypes)) {
+      candidates.push({ type: 'build', unitId: unit.id, kind });
+    }
+  }
+
+  // research：techs 数据中每个未研究 techId
+  for (const techId of Object.keys(ctx.techs)) {
+    if (player.techs.includes(techId)) continue;
+    candidates.push({ type: 'research', techId });
+  }
+
+  // upgradeCity：每个本方城 × 三选一
+  for (const city of state.cities) {
+    if (city.owner !== actor) continue;
+    for (const choice of ['workshop', 'stars5', 'wall']) {
+      candidates.push({ type: 'upgradeCity', cityId: city.id, choice });
+    }
+  }
+
+  // endTurn：恒 1 个（phase 前置由 apply 把关）
+  candidates.push({ type: 'endTurn' });
+
+  const legal: Action[] = [];
+  for (const candidate of candidates) {
+    const result = applyAction(state, candidate, ctx, options); // options 原样透传（同一迷雾语义）
+    if (!result.rejected) legal.push(candidate); // soundness：后继态丢弃，只留动作
+  }
+  legal.sort(compareActions); // §8.1 排序（稳定排序；候选键唯一 → 输出确定）
+  return legal;
+}
