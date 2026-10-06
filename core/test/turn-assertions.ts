@@ -1,6 +1,6 @@
 /**
- * 动作管线 / 回合结算边角单测（core-spec §4.7 征服、§4.1-D killSwap 受阻、§4.4 围城收入、
- * §2 heal 本土/境外、§2 research 前置），不依赖黄金向量；并入 npm test。
+ * 动作管线 / 回合结算边角单测（core-spec §4.7 征服、§4.1-D killSwap 受阻、§4.4 围城收入与
+ * D6 耐久制攻城/占领/侵蚀、§2 heal 本土/境外、§2 research 前置），不依赖黄金向量；并入 npm test。
  * 覆盖黄金向量未钉死、但规格已定案的分支；每条附带规格引用。
  * 逐条 PASS/FAIL + 汇总；任一失败进程非零退出。
  */
@@ -36,6 +36,35 @@ const CTX: ActionContext = {
 
 const maxHpOf = (type: string): number | undefined => (type === 'unit.warrior' ? 10 : undefined);
 
+/** §4.4 D6 攻城内容变体：siegeDamage ∈ 单位内容数据（夹具内联，与 data/units.json 同构） */
+const CTX_SIEGE: ActionContext = {
+  ...CTX,
+  unitTypes: { ...CTX.unitTypes, 'unit.warrior': { ...WARRIOR, siegeDamage: 1 } },
+};
+
+/** §4.4 攻城拒绝 case：显式 siegeDamage = 0（缺省态由 CTX（无该字段）同分支覆盖） */
+const CTX_SIEGE0: ActionContext = {
+  ...CTX,
+  unitTypes: { ...CTX.unitTypes, 'unit.warrior': { ...WARRIOR, siegeDamage: 0 } },
+};
+
+/** move=2 兵种变体（占领门「非相邻起点」用例需可达：budget2 = 4） */
+const CTX_MOVE2: ActionContext = {
+  ...CTX,
+  unitTypes: { ...CTX.unitTypes, 'unit.warrior': { ...WARRIOR, move: 2 } },
+};
+
+/**
+ * 城市格回填 tiles.cityId（与 turn 向量装配同构）：城格 cost 1（§4.2）与
+ * §4.1-B 城/墙加成都读 tile.cityId —— 新增用例统一过此函数。
+ */
+function stampCityTiles(state: State): State {
+  for (const city of state.cities) {
+    state.tiles[city.y][city.x].cityId = city.id;
+  }
+  return state;
+}
+
 function tile(terrain = 'plain', extra?: Partial<Tile>): Tile {
   return { terrain, road: false, village: false, ...extra };
 }
@@ -50,17 +79,24 @@ function grid(w: number, h: number, at?: (x: number, y: number) => Tile): Tile[]
   return tiles;
 }
 
-function city(id: string, x: number, y: number, owner: number, extra?: { level?: number; isCapital?: boolean }): City {
+function city(id: string, x: number, y: number, owner: number, extra?: {
+  level?: number;
+  isCapital?: boolean;
+  population?: number;
+  hasWorkshop?: boolean;
+  hasWall?: boolean;
+  wallDurability?: number;
+}): City {
   return {
     id,
     x,
     y,
     owner,
     level: extra?.level ?? 1,
-    population: 0,
-    hasWorkshop: false,
-    hasWall: false,
-    wallDurability: 0,
+    population: extra?.population ?? 0,
+    hasWorkshop: extra?.hasWorkshop ?? false,
+    hasWall: extra?.hasWall ?? false,
+    wallDurability: extra?.wallDurability ?? 0,
     isCapital: extra?.isCapital ?? false,
   };
 }
@@ -580,6 +616,393 @@ function unwrap(result: ApplyResult, mismatches: string[]): State | null {
     if (next.currentPlayer !== 1) mismatches.push(`currentPlayer: expected 1, got ${next.currentPlayer}`);
   }
   record('prep: 领地易主 → 农场/矿产出随之转移（改善随地走，§4.3）', mismatches);
+}
+
+// ══ §4.4 D6 耐久制（Phase 11-D）：攻城两路拒绝逐字 / 墙破翻转 / 占领门与落地 / 被动侵蚀 / killSwap 撞门 ══
+
+/** 拒绝用例通用断言（多用例锁步）：拒绝成立 + reason 逐字 + 输入零变化（§2 / §6 行 483） */
+function assertReject(result: ApplyResult, state: State, before: string, reason: string, mismatches: string[]): void {
+  if (!result.rejected) {
+    mismatches.push(`期望拒绝（${reason}）`);
+    return;
+  }
+  if (result.reason !== reason) {
+    mismatches.push(`reason: expected ${JSON.stringify(reason)}, got ${JSON.stringify(result.reason)}`);
+  }
+  if (canonicalJson(state) !== before) mismatches.push('拒绝路径状态必须零变化（§2）');
+}
+
+// ── §4.4 主动攻城拒绝①：敌城无墙 → 「无墙可攻」逐字 + 零变化（隔离变量 = 仅墙） ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 0, 1)],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true }), // 敌城空、相邻、可见、城主敌对 —— 但无墙
+    ],
+    players: [player(0), player(1)],
+  }));
+  const before = canonicalJson(state);
+  const result = applyAction(state, { type: 'attack', unitId: 'unit.000001', targetId: 'city.000002' }, CTX_SIEGE);
+  const mismatches: string[] = [];
+  assertReject(result, state, before, 'attack: 无墙可攻（wallDurability=0）（§4.4）', mismatches);
+  record('attack 攻城: 无墙敌城 → 「无墙可攻」逐字拒绝 + 零变化（§4.4）', mismatches);
+}
+
+// ── §4.4 主动攻城拒绝②：siegeDamage 显式 0 与字段缺省 → 「无攻城能力」逐字 + 零变化 ──
+for (const [label, ctx] of [
+  ['显式 siegeDamage=0', CTX_SIEGE0],
+  ['字段缺省（?? 0 同分支）', CTX],
+] as const) {
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 0, 1)],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 3 }), // 唯一变量 = 攻城能力
+    ],
+    players: [player(0), player(1)],
+  }));
+  const before = canonicalJson(state);
+  const result = applyAction(state, { type: 'attack', unitId: 'unit.000001', targetId: 'city.000002' }, ctx);
+  const mismatches: string[] = [];
+  assertReject(result, state, before, 'attack: unit.warrior 无攻城能力（siegeDamage=0）（§4.4）', mismatches);
+  record(`attack 攻城: ${label} → 「无攻城能力」逐字拒绝 + 零变化（§4.4）`, mismatches);
+}
+
+// ── §4.4 削耐久触 0 → 墙破翻转（hasWall ⇔ dur ∈ 1..3 不变量）+ 非战斗结算 ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 0, 1)],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 1 }),
+    ],
+    players: [player(0), player(1)],
+  }));
+  const result = applyAction(state, { type: 'attack', unitId: 'unit.000001', targetId: 'city.000002' }, CTX_SIEGE);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    const wall = next.cities.find((entry) => entry.id === 'city.000002');
+    if (wall === undefined) {
+      mismatches.push('city.000002 缺失');
+    } else if (wall.hasWall !== false || wall.wallDurability !== 0) {
+      mismatches.push(`墙破翻转: expected hasWall=false/dur=0, got hasWall=${wall.hasWall}/dur=${wall.wallDurability}（§1 不变量）`);
+    }
+    const attacker = next.units[0];
+    if (!attacker.attacked) mismatches.push('attacked: expected true（§2 后效）');
+    if (attacker.moved) mismatches.push('moved: expected false（攻城不移动）');
+    if (attacker.x !== 0 || attacker.y !== 1) mismatches.push(`非战斗结算应留原地 (0,1), got (${attacker.x},${attacker.y})`);
+    if (attacker.hp !== 10) mismatches.push(`非战斗结算 hp 不动: expected 10, got ${attacker.hp}`);
+    if (!result.rejected && result.winner !== null) mismatches.push(`winner: expected null（A/B 各持首都）, got ${String(result.winner)}`);
+  }
+  record('attack 攻城: dur1 − siege1 触 0 → 墙破翻转、attacked=true、非战斗结算（§4.4/§1）', mismatches);
+}
+
+// ── §4.4 削后 dur > 0 → 不翻墙（hasWall 保持 true，§1 不变量方向反证） ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 0, 1)],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 3 }),
+    ],
+    players: [player(0), player(1)],
+  }));
+  const result = applyAction(state, { type: 'attack', unitId: 'unit.000001', targetId: 'city.000002' }, CTX_SIEGE);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    const wall = next.cities.find((entry) => entry.id === 'city.000002');
+    if (wall === undefined) {
+      mismatches.push('city.000002 缺失');
+    } else if (!wall.hasWall || wall.wallDurability !== 2) {
+      mismatches.push(`削后未触 0: expected hasWall=true/dur=2, got hasWall=${wall.hasWall}/dur=${wall.wallDurability}`);
+    }
+    if (!result.rejected && result.winner !== null) mismatches.push(`winner: expected null, got ${String(result.winner)}`);
+  }
+  record('attack 攻城: dur3 − siege1 = 2 > 0 → 保持 hasWall=true（§1 不变量）', mismatches);
+}
+
+// ── §4.4 占领门条件 1：墙未破（相邻/城空/可达全绿）→ 逐字拒绝 + 零变化 ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 0, 1)],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 3 }),
+    ],
+    players: [player(0), player(1)],
+  }));
+  const before = canonicalJson(state);
+  const result = applyAction(state, { type: 'move', unitId: 'unit.000001', x: 1, y: 1 }, CTX);
+  const mismatches: string[] = [];
+  assertReject(result, state, before, 'move: 敌城未破或需从相邻格进入（§4.4）', mismatches);
+  record('move 占领门条件1: 墙未破（相邻+城空+可达全绿）→ 逐字拒绝 + 零变化（§4.4）', mismatches);
+}
+
+// ── §4.4 占领门条件 2：无墙但起点非相邻（可达全绿）→ 同一逐字理由 + 零变化 ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [unit('unit.000001', 0, 0, 0)],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 0, 2, 1, { isCapital: true }), // 无墙、城空、move2 可达 —— 但切比雪夫 2
+    ],
+    players: [player(0), player(1)],
+  }));
+  const before = canonicalJson(state);
+  const result = applyAction(state, { type: 'move', unitId: 'unit.000001', x: 0, y: 2 }, CTX_MOVE2);
+  const mismatches: string[] = [];
+  assertReject(result, state, before, 'move: 敌城未破或需从相邻格进入（§4.4）', mismatches);
+  record('move 占领门条件2: 无墙但起点非相邻（切比雪夫 2，可达全绿）→ 同一逐字拒绝 + 零变化（§4.4）', mismatches);
+}
+
+// ── §4.4 占领落地逐字段：owner 易主 / level 保留 / pop−1 与下限 0 / isCapital·workshop 保留 /
+//    墙清除 / §4.7 noCityTurns 清零 / 胜利检查（B 仍持首都 → null） ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [
+      unit('unit.000001', 0, 0, 1, { homeCity: null }),
+      unit('unit.000002', 0, 0, 2, { homeCity: null }),
+    ],
+    cities: [
+      city('city.000001', 1, 1, 1, { level: 2, population: 3, hasWorkshop: true, isCapital: true }),
+      city('city.000002', 1, 2, 1, { population: 0 }), // pop 下限用例
+      city('city.000003', 2, 0, 1, { isCapital: true }), // B 保留的首都 → 无征服
+    ],
+    players: [player(0, { noCityTurns: 5, stars: 5 }), player(1, { stars: 5 })],
+    currentPlayer: 0,
+  }));
+  const mismatches: string[] = [];
+  const first = applyAction(state, { type: 'move', unitId: 'unit.000001', x: 1, y: 1 }, CTX);
+  const afterFirst = unwrap(first, mismatches);
+  if (afterFirst !== null) {
+    const captured = afterFirst.cities[0]; // cities 按 id 存储序 → city.000001
+    if (captured.owner !== 0) mismatches.push(`owner: expected 0（A）, got ${captured.owner}`);
+    if (captured.level !== 2) mismatches.push(`level 保留: expected 2, got ${captured.level}`);
+    if (captured.population !== 2) mismatches.push(`population: expected 2（3 − 1）, got ${captured.population}`);
+    if (!captured.hasWorkshop) mismatches.push('hasWorkshop 保留: expected true');
+    if (!captured.isCapital) mismatches.push('isCapital 保留: expected true');
+    if (captured.hasWall || captured.wallDurability !== 0) {
+      mismatches.push(`墙清除: expected hasWall=false/dur=0, got ${captured.hasWall}/${captured.wallDurability}`);
+    }
+    if (afterFirst.players[0].noCityTurns !== 0) {
+      mismatches.push(`A noCityTurns: expected 0（占城瞬间清零，§4.7）, got ${afterFirst.players[0].noCityTurns}`);
+    }
+    const mover = afterFirst.units[0];
+    if (mover.x !== 1 || mover.y !== 1 || !mover.moved) {
+      mismatches.push(`mover: expected (1,1)/moved=true, got (${mover.x},${mover.y})/moved=${mover.moved}`);
+    }
+    if (!first.rejected && first.winner !== null) mismatches.push(`winner: expected null（B 仍持首都 c3）, got ${String(first.winner)}`);
+
+    const second = applyAction(afterFirst, { type: 'move', unitId: 'unit.000002', x: 1, y: 2 }, CTX);
+    const afterSecond = unwrap(second, mismatches);
+    if (afterSecond !== null) {
+      const floorCity = afterSecond.cities[1]; // city.000002：pop 0 → max(0, −1) = 0
+      if (floorCity.owner !== 0) mismatches.push(`c2 owner: expected 0, got ${floorCity.owner}`);
+      if (floorCity.population !== 0) mismatches.push(`population 下限: expected 0, got ${floorCity.population}`);
+      if (floorCity.level !== 1 || floorCity.isCapital) {
+        mismatches.push(`c2 level/isCapital 保留: expected level=1/isCapital=false, got level=${floorCity.level}/isCapital=${floorCity.isCapital}`);
+      }
+      const keeper = afterSecond.cities[2]; // city.000003：B 首都未动
+      if (keeper.owner !== 1 || !keeper.isCapital) mismatches.push('city.000003 应仍属 B 且 isCapital（未被动）');
+      if (afterSecond.players[0].noCityTurns !== 0) mismatches.push('A noCityTurns 保持 0');
+      const secondMover = afterSecond.units[1];
+      if (secondMover.x !== 1 || secondMover.y !== 2 || !secondMover.moved) {
+        mismatches.push(`secondMover: expected (1,2)/moved=true, got (${secondMover.x},${secondMover.y})/moved=${secondMover.moved}`);
+      }
+      if (!second.rejected && second.winner !== null) mismatches.push(`winner: expected null, got ${String(second.winner)}`);
+    }
+  }
+  record('move 占领落地: owner/level/pop−1 与下限0/isCapital·workshop 保留/墙清除/noCityTurns 清零（§4.4/§4.7）', mismatches);
+}
+
+// ── §3.1 commit-1 被动侵蚀：相邻敌 ≥2 触 0 → 墙破；仅 1 敌不减；无墙跳过（被围方 B 提交时结算） ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [
+      unit('unit.000001', 0, 0, 1),
+      unit('unit.000002', 0, 2, 2),
+      unit('unit.000003', 0, 1, 0),
+    ],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }), // 无墙 → 跳过
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 1 }), // 3 敌 → 触 0 墙破
+      city('city.000003', 2, 0, 1, { hasWall: true, wallDurability: 3 }), // 仅 u3 相邻 = 1 敌 → 不减
+    ],
+    players: [player(0), player(1)],
+    currentPlayer: 1, // B 提交 → commit-1 对其被围城结算
+  }));
+  const result = applyAction(state, { type: 'endTurn' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    const broken = next.cities[1];
+    if (broken.hasWall !== false || broken.wallDurability !== 0) {
+      mismatches.push(`c2 触 0 墙破: expected hasWall=false/dur=0, got ${broken.hasWall}/${broken.wallDurability}`);
+    }
+    const held = next.cities[2];
+    if (!held.hasWall || held.wallDurability !== 3) {
+      mismatches.push(`c3 仅 1 相邻敌不侵蚀: expected hasWall=true/dur=3, got ${held.hasWall}/${held.wallDurability}`);
+    }
+    if (next.currentPlayer !== 0) mismatches.push(`currentPlayer: expected 0, got ${next.currentPlayer}`);
+    if (next.turn !== 1) mismatches.push(`turn: expected 1（回绕）, got ${next.turn}`);
+  }
+  record('commit-1 被动侵蚀: 相邻敌 ≥2 触 0 → 墙破；仅 1 敌不减、无墙跳过（§3.1/§4.4）', mismatches);
+}
+
+// ── §4.1-5 killSwap 敌城语义：城上守军被杀但墙未破 → 补位受阻留原地、城与墙不动 ──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [
+      unit('unit.000001', 0, 0, 1),
+      unit('unit.000002', 1, 1, 1, { hp: 1 }), // 守军站在未破墙的城上
+    ],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 3 }),
+    ],
+    players: [player(0), player(1)],
+  }));
+  const result = applyAction(state, { type: 'attack', unitId: 'unit.000001', targetId: 'unit.000002' }, CTX);
+  const mismatches: string[] = [];
+  const next = unwrap(result, mismatches);
+  if (next !== null) {
+    if (next.units.length !== 1) mismatches.push(`units: expected 1（守军阵亡）, got ${next.units.length}`);
+    const attacker = next.units[0];
+    if (attacker.x !== 0 || attacker.y !== 1) {
+      mismatches.push(`补位受阻应留原地 (0,1), got (${attacker.x},${attacker.y})`);
+    }
+    if (attacker.kills !== 1) mismatches.push(`kills: expected 1, got ${attacker.kills}`);
+    if (!attacker.attacked) mismatches.push('attacked: expected true');
+    if (attacker.promoted) mismatches.push('promoted: expected false（kills 1 < promotion.kills 3）');
+    const targetCity = next.cities[1];
+    if (targetCity.owner !== 1 || !targetCity.hasWall || targetCity.wallDurability !== 3) {
+      mismatches.push(`城与墙应不动: expected owner=1/hasWall=true/dur=3, got owner=${targetCity.owner}/${targetCity.hasWall}/${targetCity.wallDurability}`);
+    }
+    if (!result.rejected && result.winner !== null) mismatches.push(`winner: expected null, got ${String(result.winner)}`);
+  }
+  record('killSwap 撞墙门: 城上守军被杀但墙未破 → 补位受阻留原地（§4.1-5/§4.4）', mismatches);
+}
+
+// ── killSwap 补位过门进墙已破敌城 = 即占领（§4.4 裁决 2026-10-06：进入即占领，与 move 同一落地）──
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [
+      unit('unit.000001', 0, 0, 1), // A 攻方（owner0, x0, y1），与城 (1,1) 相邻
+      { ...unit('unit.000002', 1, 1, 1), hp: 1 }, // B 守军（owner1, x1, y1）hp1 站无墙城 → 被杀即补位
+    ],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: false, level: 2, population: 3, hasWorkshop: true }),
+      city('city.000003', 2, 2, 1, { isCapital: true }), // B 首都留守 → 无征服
+    ],
+    players: [player(0), player(1)],
+    currentPlayer: 0,
+  }));
+  const mismatches: string[] = [];
+  // 伤害手推：def10 = 20 + 姿态10（城被围失效、无墙）= 30 → M=64；E=10+1=11 →
+  // 20×3×11×64/20000 = 4.34 → rhu 4 ≥ hp1 → 守军死（若数值漂移致不死，下面两处断言会红）
+  const combat = applyAction(state, { type: 'attack', unitId: 'unit.000001', targetId: 'unit.000002' }, CTX);
+  const winner = combat.rejected ? undefined : combat.winner;
+  const next = unwrap(combat, mismatches);
+  if (next !== null) {
+    const attacker = next.units.find((entry) => entry.id === 'unit.000001');
+    if (attacker === undefined) {
+      mismatches.push('攻方应在场');
+    } else {
+      if (attacker.x !== 1 || attacker.y !== 1) {
+        mismatches.push(`补位: expected (1,1), got (${attacker.x},${attacker.y}) —— 门通过应补位`);
+      }
+      if (attacker.kills !== 1) mismatches.push(`kills: expected 1, got ${attacker.kills}`);
+    }
+    const captured = next.cities.find((entry) => entry.id === 'city.000002');
+    if (captured === undefined) {
+      mismatches.push('城 city.000002 应在场');
+    } else {
+      if (captured.owner !== 0) mismatches.push(`占领 owner: expected 0（补位进入即占领）, got ${captured.owner}`);
+      if (captured.level !== 2) mismatches.push(`level 保留: expected 2, got ${captured.level}`);
+      if (captured.population !== 2) mismatches.push(`pop−1: expected 2（3−1）, got ${captured.population}`);
+      if (!captured.hasWorkshop) mismatches.push('workshop 应保留');
+      if (captured.isCapital) mismatches.push('isCapital 不变（应保持 false）');
+    }
+    if (winner !== null && winner !== undefined) {
+      mismatches.push(`winner: expected null（B 仍持首都 c3）, got ${winner} —— 占领非首都城不应触发征服`);
+    }
+  }
+  record('killSwap 补位占领: 过门进墙已破敌城 → 补位 + 即占领 owner/level/pop/workshop（§4.4 裁决）', mismatches);
+}
+
+// ── 城防回归（V9/V10 配对语义，经 D6 侵蚀破墙路径）：被围 → 城 +10 失效；墙 +20 仅当 hasWall ──
+// 伤害手推（§4.1 公式）：def10 = 20 本体 + 姿态 10 = 30（城被围失效、墙已破失效）→ M(30) = 64；
+// 20×3×20×64/20000 = 4.34 → rhu 4 → 守军 10 → 6；若城或墙加成误留 → def 40/50 → hp 7/8 可判别。
+{
+  const state = stampCityTiles(baseState({
+    w: 3,
+    h: 3,
+    units: [
+      unit('unit.000001', 0, 0, 1),
+      unit('unit.000002', 0, 2, 2),
+      unit('unit.000003', 1, 1, 1), // B 守军站在 dur1 城上
+    ],
+    cities: [
+      city('city.000001', 0, 0, 0, { isCapital: true }),
+      city('city.000002', 1, 1, 1, { isCapital: true, hasWall: true, wallDurability: 1 }),
+    ],
+    players: [player(0), player(1)],
+    currentPlayer: 1,
+  }));
+  const mismatches: string[] = [];
+  // 步骤 1：B 提交 → commit-1 两敌相邻 → dur1 触 0 → 墙破（守军仍在）
+  const eroded = applyAction(state, { type: 'endTurn' }, CTX);
+  const afterErosion = unwrap(eroded, mismatches);
+  if (afterErosion !== null) {
+    const walled = afterErosion.cities[1];
+    if (walled.hasWall !== false || walled.wallDurability !== 0) {
+      mismatches.push(`步骤1 墙破: expected false/0, got ${walled.hasWall}/${walled.wallDurability}`);
+    }
+    // 步骤 2：A 的 u2 攻击城上守军 → 城防加成（被围）与墙防加成（hasWall=false）均失效
+    const combat = applyAction(afterErosion, { type: 'attack', unitId: 'unit.000002', targetId: 'unit.000003' }, CTX);
+    const next = unwrap(combat, mismatches);
+    if (next !== null) {
+      const defender = next.units.find((entry) => entry.id === 'unit.000003');
+      if (defender === undefined) {
+        mismatches.push('守军应存活（伤害 4 < hp 10）');
+      } else if (defender.hp !== 6) {
+        mismatches.push(`守军 hp: expected 6（10 − 4；城/墙加成均失效）, got ${defender.hp}`);
+      }
+      const attacker = next.units.find((entry) => entry.id === 'unit.000002');
+      if (attacker === undefined) {
+        mismatches.push('攻方 unit.000002 缺失');
+      } else {
+        if (!attacker.attacked) mismatches.push('攻方 attacked: expected true');
+        if (attacker.hp !== 5) mismatches.push(`攻方 hp: expected 5（10 − 反击 5），got ${attacker.hp}`);
+      }
+      if (!combat.rejected && combat.winner !== null) mismatches.push(`winner: expected null, got ${String(combat.winner)}`);
+    }
+  }
+  record('城防回归: 侵蚀墙破后攻城上守军 → 被围城防失效 + 墙防仅当 hasWall（V9/V10 配对）', mismatches);
 }
 
 console.log(`${pass}/${pass + fail} PASS`);

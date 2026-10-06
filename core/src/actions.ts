@@ -17,7 +17,10 @@
  * 规格层备注（不改 docs / testdata，随交付报告）：
  * - §2 行 61 train 载荷键 `type` 与 §6 行 461 动作判别键 `type` 同名 —— 夹具以重复键表达，
  *   Action 侧将载荷兵种定名 `unitType`，runner 按原文本恢复（见 turn-vector-runner）。
- * - attack 的 cityId 目标依赖 D6 破城分支（§4.4 未定案）→ 拒绝而非发明语义。
+ * - §4.4 D6 耐久制已冻结（2026-10-06）→ attack 的 cityId 分支（主动攻城）、move 占领门、
+ *   §3.1 commit-1 被动侵蚀、§4.1-5 killSwap 敌城语义均已落地。
+ *   killSwap 补位过门进入**墙已破**敌城 = 即占领（2026-10-06 裁决：「进入即占领」按进入
+ *   语义统一，与 move 同一 captureEnemyCity 路径 —— 见 killSwap 处注释）。
  */
 import balance from '../../data/balance.json';
 import { resolveCombat, type UnitBase } from './combat';
@@ -43,6 +46,8 @@ export interface UnitTypeDef {
   killSwap?: boolean;
   /** §2「type 已解锁」的科技门槛；内容数据未声明关联 = 无门槛 */
   tech?: string;
+  /** §4.4 D6 主动攻城削耐久（units.json 字段，缺省 0 = 无攻城能力） */
+  siegeDamage?: number;
 }
 
 /** 科技定义（techs.json 行段）：cost = tier × 城市数 + 4（§4.3），requires = 同分支前序 */
@@ -313,6 +318,30 @@ function combatBase(typeDef: UnitTypeDef, unit: Unit): UnitBase {
   return { atk10: typeDef.atk10, def10: typeDef.def10, hp: unit.hp, maxHp: typeDef.hp, counter: typeDef.counter };
 }
 
+/**
+ * §2 行 60 attack 公共目标谓词（单位战斗与 §4.4 D6 攻城两分支共用）：
+ * 切比雪夫 ≤ `range` 且目标格对行动玩家可见 → null；否则返回拒绝理由（逐字）。
+ */
+function attackTargetPredicates(
+  state: State,
+  actor: number,
+  attacker: Unit,
+  atkType: UnitTypeDef,
+  targetX: number,
+  targetY: number,
+): string | null {
+  if (!isInt(atkType.range)) throw new Error(`unitTypes[${attacker.type}].range 非法`);
+  if (chebyshev(attacker.x, attacker.y, targetX, targetY) > atkType.range) {
+    return 'attack: 目标超出射程（§2 切比雪夫 ≤ range）';
+  }
+  // §2 目标「可见」：行动玩家的视野源并集（§4.5；content 山地 id = terrain.mountain 约定值）
+  const visible = visibleCellsFor(actor, state, 'mountain');
+  if (!visible.some((coord) => coord.x === targetX && coord.y === targetY)) {
+    return 'attack: 目标不可见（§4.1-E / §4.5）';
+  }
+  return null;
+}
+
 // ── §3.1 回合阶段 ──
 
 /** §3.1 prep：清本方旗 → 收入（cities id 序；被围归零）→ 改善产出（§4.3）→ phase = act */
@@ -389,7 +418,8 @@ function settleImprovementYields(state: State, ctx: ActionContext): void {
  */
 function checkVictory(state: State): number | null {
   const capitals = state.cities.filter((city) => city.isCapital);
-  if (capitals.length === 0) return null;
+  // §4.7：征服前置 = 开局首都集合 ≥ 2（单首都配置无对抗语义，真空真值不触发；2026-10-06）
+  if (capitals.length < 2) return null;
   const owner = capitals[0].owner;
   return capitals.every((city) => city.owner === owner) ? owner : null;
 }
@@ -448,11 +478,26 @@ export function applyAction(
         })),
       );
       if (!dests.some((dest) => dest.x === x && dest.y === y)) return reject('move: 目标不可达（§4.2 可达集）');
+      // §4.4 占领门（move 目标 = 敌方城格）：① hasWall=false ② 起点与城切比雪夫 = 1 ——
+      // ③ 城格无单位由 §2 公共谓词承担（可达集占位过滤 → 上一行已拒）。
+      // 三条件违反同一逐字理由；门在落地前判 → 拒绝即零变化。
+      const destTile = next.tiles[y][x];
+      let capturedCity: City | undefined;
+      const destCityId = destTile.cityId;
+      if (destCityId !== null && destCityId !== undefined) {
+        const destCity = findCity(next, destCityId);
+        if (destCity !== undefined && destCity.owner !== actor) {
+          if (destCity.hasWall || chebyshev(unit.x, unit.y, destCity.x, destCity.y) !== 1) {
+            return reject('move: 敌城未破或需从相邻格进入（§4.4）');
+          }
+          capturedCity = destCity;
+        }
+      }
       unit.x = x;
       unit.y = y;
       unit.moved = true; // §2 后效
-      const tile = next.tiles[y][x];
-      if (tile.village) captureVillage(next, unit, tile); // §4.2 进入即结算
+      if (capturedCity !== undefined) captureEnemyCity(next, unit, capturedCity); // §4.4 占领落地
+      else if (destTile.village) captureVillage(next, unit, destTile); // §4.2 进入即结算
       break;
     }
 
@@ -471,22 +516,37 @@ export function applyAction(
       }
       const target = findUnit(next, targetId);
       if (target === undefined) {
-        if (findCity(next, targetId) !== undefined) {
-          return reject('attack: 攻城目标（cityId）依赖 D6 破城分支，未定案（§4.4 红线）');
+        const targetCity = findCity(next, targetId);
+        if (targetCity === undefined) return reject(`attack: 目标 ${targetId} 不存在`);
+        // ── §4.4 D6 主动攻城（targetId = cityId，非战斗结算） ──
+        if (targetCity.owner === actor) return reject('attack: 目标须为敌方（§2）');
+        // 「城上有守军 → 正常战斗（targetId 必须是 unitId）」（§4.4）
+        if (next.units.some((unit) => unit.x === targetCity.x && unit.y === targetCity.y)) {
+          return reject('attack: 城上有守军，targetId 须为 unitId（§4.4）');
         }
-        return reject(`attack: 目标 ${targetId} 不存在`);
+        const reach = attackTargetPredicates(next, actor, attacker, atkType, targetCity.x, targetCity.y);
+        if (reach !== null) return reject(reach);
+        // 内容缺省 0 = 无攻城能力（§4.4 两路拒绝措辞逐字）
+        if (!targetCity.hasWall) return reject('attack: 无墙可攻（wallDurability=0）（§4.4）');
+        const siegeDamage = atkType.siegeDamage ?? 0;
+        if (!isInt(siegeDamage)) throw new Error(`unitTypes[${attacker.type}].siegeDamage 非法`);
+        if (siegeDamage <= 0) return reject(`attack: ${attacker.type} 无攻城能力（siegeDamage=0）（§4.4）`);
+        // 削耐久（整数）；触 0 或以下 → 墙破：hasWall=false, wallDurability=0（§1 不变量
+        // hasWall ⇔ wallDurability ∈ 1..3，不存在 0 带墙态）
+        const durability = targetCity.wallDurability - siegeDamage;
+        if (durability <= 0) {
+          targetCity.wallDurability = 0;
+          targetCity.hasWall = false;
+        } else {
+          targetCity.wallDurability = durability;
+        }
+        attacker.attacked = true; // §2 后效（不走战斗结算 → hp / 位置不动）
+        break;
       }
       if (target.owner === actor) return reject('attack: 目标须为敌方（§2）');
       if (target.hp <= 0) return reject('attack: hp = 0 单位不可被选为攻击目标（§5）');
-      if (!isInt(atkType.range)) throw new Error(`unitTypes[${attacker.type}].range 非法`);
-      if (chebyshev(attacker.x, attacker.y, target.x, target.y) > atkType.range) {
-        return reject('attack: 目标超出射程（§2 切比雪夫 ≤ range）');
-      }
-      // §2 目标「可见」：行动玩家的视野源并集（§4.5；content 山地 id = terrain.mountain 约定值）
-      const visible = visibleCellsFor(actor, next, 'mountain');
-      if (!visible.some((coord) => coord.x === target.x && coord.y === target.y)) {
-        return reject('attack: 目标不可见（§4.1-E / §4.5）');
-      }
+      const reach = attackTargetPredicates(next, actor, attacker, atkType, target.x, target.y);
+      if (reach !== null) return reject(reach);
       const defType = requireUnitType(ctx, target.type);
       const result = resolveCombat(
         {
@@ -504,11 +564,28 @@ export function applyAction(
       attacker.attacked = true;
       if (result.defenderDied) {
         removeUnit(next, target.id);
-        // killSwap（§4.1-D）：目标格可通行且空 → 攻方补位，否则留原地（§5 近战补位受阻）
+        // killSwap（§4.1-D）：目标格可通行且空 → 攻方补位；否则留原地（§5 近战补位受阻）。
+        // §4.1-5 敌城语义：补位进敌城格同受 §4.4 占领门 —— 墙未破 或 起点与城非相邻 →
+        // 补位受阻、攻方留原地（门的第三条件「城格无单位」在守军移除后恒成立）。
+        // 歧义待规格层拍板（见文件头）：过门补位进**墙已破**敌城是否即占领 —— §4.4 钉的
+        // 「move 进入即占领」未覆盖 killSwap 路径 → 此处不改 owner，仅按门决定补位与否。
         const killSwap = atkType.killSwap ?? atkType.range <= 1;
         if (killSwap && isPassable(next, target.x, target.y)) {
-          attacker.x = target.x;
-          attacker.y = target.y;
+          const swapCityId = next.tiles[target.y][target.x].cityId;
+          const swapCity = swapCityId !== null && swapCityId !== undefined ? findCity(next, swapCityId) : undefined;
+          const gateBlocked =
+            swapCity !== undefined &&
+            swapCity.owner !== attacker.owner &&
+            (swapCity.hasWall || chebyshev(attacker.x, attacker.y, swapCity.x, swapCity.y) !== 1);
+          if (!gateBlocked) {
+            attacker.x = target.x;
+            attacker.y = target.y;
+            // §4.4 裁决（2026-10-06）：补位过门进入墙已破敌城 = 与 move 同一占领落地
+            //（「进入即占领」按进入语义统一，不区分进入方式）→ 同一 captureEnemyCity 路径。
+            if (swapCity !== undefined && swapCity.owner !== attacker.owner) {
+              captureEnemyCity(next, attacker, swapCity);
+            }
+          }
         }
         attacker.kills += 1;
         if (!attacker.promoted && attacker.kills >= promotion.kills) attacker.promoted = true; // §4.1-D
@@ -710,12 +787,23 @@ export function applyAction(
     }
 
     case 'endTurn': {
-      // §3.1 commit-1 围城推进：按 cities id 序（存储序）遍历被围城 —— D6 破城分支
-      // （§4.4 耐久制 / 血条制）未定案，红线「勿实现破城逻辑」→ 此处仅留确定性遍历结构桩；
-      // 无被围城时自然空转，定案后在本循环内推进 wallDurability。
+      // §3.1 commit-1 围城推进（§4.4 D6 耐久制）：按 cities id 序（存储序）遍历 ——
+      // 被围城（besieged 衍生量 = 存在图内相邻敌单位）且 hasWall=true → 统计相邻敌军：
+      // ≥2 → wallDurability −1（下限 0）；触 0 → 墙破（hasWall=false, wallDurability=0）。
+      // 无墙城跳过（dur 恒 0）；阈值与削减量是 §3.1/§4.4 冻结规则常数（非 balance 可调项）。
       for (const city of next.cities) {
-        if (isBesieged(next, city)) {
-          // 结构桩：D6 定案后在此推进被围城耐久
+        if (!city.hasWall) continue;
+        let adjacentEnemies = 0;
+        for (const unit of next.units) {
+          if (unit.owner !== city.owner && chebyshev(unit.x, unit.y, city.x, city.y) === 1) adjacentEnemies += 1;
+        }
+        if (adjacentEnemies < 2) continue;
+        const durability = city.wallDurability - 1;
+        if (durability <= 0) {
+          city.wallDurability = 0;
+          city.hasWall = false;
+        } else {
+          city.wallDurability = durability;
         }
       }
       // §3.1 commit-2 无城宽限计数（T4，§4.7）：提交者无城 → noCityTurns+1，
@@ -780,5 +868,21 @@ function captureVillage(state: State, unit: Unit, tile: Tile): void {
     wallDurability: 0,
     isCapital: false,
   });
+  state.players[unit.owner].noCityTurns = 0;
+}
+
+/**
+ * §4.4 占领落地（move 进入敌城格、占领门三条件全过）：
+ * `owner = 占领方`、`level` 保留、`population = max(0, population − 1)`、`isCapital` 不变、
+ * `hasWorkshop` 保留、`hasWall = false, wallDurability = 0`（墙随城破，可 upgrade-wall 重筑）、
+ * 占领方 `noCityTurns = 0`（§4.7 占城瞬间清零）。原守军逐出：门的「城格无单位」保证路径
+ * 上无兵（§4.4：逐出规则留给未来路径）。
+ * 胜利检查不在本函数内 —— §3.2 尾序的 checkVictory 在动作后统一执行。
+ */
+function captureEnemyCity(state: State, unit: Unit, city: City): void {
+  city.owner = unit.owner;
+  city.population = city.population > 0 ? city.population - 1 : 0; // 易手 −1，下限 0
+  city.hasWall = false;
+  city.wallDurability = 0;
   state.players[unit.owner].noCityTurns = 0;
 }
