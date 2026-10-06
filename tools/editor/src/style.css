@@ -1,0 +1,242 @@
+/* Squarefolk 数据工坊 —— 布局与配色（深色工作台） */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font: 14px/1.5 -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif;
+  background: #14171c;
+  color: #d8dde4;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ── 侧栏 ── */
+#sidebar {
+  width: 220px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #2a2f38;
+  background: #1a1e25;
+}
+
+#sidebar h1 {
+  margin: 0;
+  padding: 14px 16px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8b93a1;
+  letter-spacing: 0.06em;
+}
+
+#file-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+}
+
+#file-list .file {
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #c3cad4;
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  cursor: pointer;
+}
+
+#file-list .file:hover {
+  background: #232833;
+}
+
+#file-list .file.active {
+  background: #2b3444;
+  color: #fff;
+}
+
+#sidebar-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #2a2f38;
+}
+
+#sidebar-actions button {
+  padding: 8px 10px;
+  border: 1px solid #3a4150;
+  border-radius: 6px;
+  background: #232833;
+  color: #d8dde4;
+  cursor: pointer;
+}
+
+#sidebar-actions button:hover {
+  background: #2b3444;
+}
+
+/* ── 主区 ── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #2a2f38;
+  background: #1a1e25;
+}
+
+#active-name {
+  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9ecbff;
+}
+
+#dirty-flag {
+  color: #e5b567;
+  font-size: 12px;
+}
+
+#btn-save {
+  margin-left: auto;
+  padding: 6px 18px;
+  border: none;
+  border-radius: 6px;
+  background: #2f81f7;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#btn-save:disabled {
+  background: #303645;
+  color: #6b7280;
+  cursor: default;
+}
+
+#status {
+  font-size: 12px;
+  color: #8b93a1;
+}
+
+#status.error {
+  color: #f4776a;
+}
+
+#editor-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+#source {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 14px 16px;
+  background: #14171c;
+  color: #e6edf3;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  tab-size: 2;
+}
+
+/* ── 底部面板 ── */
+#bottom-pane {
+  height: 240px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #2a2f38;
+  background: #1a1e25;
+}
+
+#panel-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid #2a2f38;
+}
+
+#panel-tabs .tab {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  color: #8b93a1;
+  cursor: pointer;
+}
+
+#panel-tabs .tab.active {
+  background: #14171c;
+  color: #fff;
+}
+
+.panel {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 16px;
+  background: #14171c;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.ok {
+  color: #57ab5a;
+  margin: 0;
+}
+
+.error {
+  color: #f4776a;
+  margin: 0;
+}
+
+.dim {
+  color: #8b93a1;
+  margin: 0 0 8px;
+}
+
+.error-list {
+  margin: 0;
+  padding-left: 18px;
+  font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #f4776a;
+}
+
+.diff-list,
+.markdown {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #c3cad4;
+}
+
+.preview-bar {
+  margin-bottom: 8px;
+}
+
+.preview-bar button {
+  padding: 6px 12px;
+  border: 1px solid #3a4150;
+  border-radius: 6px;
+  background: #232833;
+  color: #d8dde4;
+  cursor: pointer;
+}

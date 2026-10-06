@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * validate 自测（进 npm test 链）：对**故意破坏**的数据样例断言 tools/validate.mjs 能抓住。
- * 做法：把真实 data/ 整目录复制进临时目录 → 逐例单点破坏 → runValidate（全管线：
- * schema 校验 + 交叉引用检查）→ 断言报出预期错误。基线例（真实数据 0 错误）先行。
+ * validate 自测（进 npm test 链）：对**故意破坏**的数据样例断言校验核心能抓住。
+ * 做法：把真实 data/ 整目录复制进临时目录 → 逐例单点破坏 → 调纯核心 validateDataFiles
+ * （tools/validate-core.mjs，全管线：schema 校验 + 交叉引用检查；fs 读文件是本壳的职责）
+ * → 断言报出预期错误。基线例（真实数据 0 错误）先行。
  *
  * 覆盖：基线干净 / 环状科技树 / 悬空科技引用 / 越界数值 / id 命名违规 /
  *       未知地形 allowedOn / schema 子集外的多余字段。
@@ -12,9 +13,30 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runValidate } from './validate.mjs';
+import { CONTENT_PAIRS, validateDataFiles } from './validate-core.mjs';
 
 const REPO_DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data');
+
+/** 读临时目录 dataDir 下的五件数据 + 五个 schema（读取失败记入 errors、置 null），调纯核心 → 错误数组 */
+function runValidate(dataDir) {
+  const errors = [];
+  const data = {};
+  const schemas = {};
+  const load = (file, label) => {
+    try {
+      return JSON.parse(readFileSync(file, 'utf8'));
+    } catch (e) {
+      errors.push(`${label}: 读取/解析失败 — ${e.message}`);
+      return null;
+    }
+  };
+  for (const [dataFile, schemaFile] of CONTENT_PAIRS) {
+    data[dataFile] = load(path.join(dataDir, dataFile), dataFile);
+    schemas[schemaFile] = load(path.join(dataDir, 'schemas', schemaFile), `schemas/${schemaFile}`);
+  }
+  errors.push(...validateDataFiles({ data, schemas }));
+  return errors;
+}
 
 let pass = 0;
 let fail = 0;

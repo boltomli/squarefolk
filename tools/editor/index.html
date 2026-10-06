@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squarefolk 数据工坊</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <h1>数据文件</h1>
+        <nav id="file-list" aria-label="data 文件列表"></nav>
+        <div id="sidebar-actions">
+          <button id="btn-diff" type="button">与 HEAD 对比</button>
+          <button id="btn-export" type="button">导出 Markdown</button>
+        </div>
+      </aside>
+      <main id="main">
+        <header id="toolbar">
+          <span id="active-name">—</span>
+          <span id="dirty-flag" hidden>● 未保存</span>
+          <div id="view-switch" role="group" aria-label="视图切换">
+            <button id="btn-view-source" class="view-btn active" type="button">源码</button>
+            <button id="btn-view-table" class="view-btn" type="button">表格</button>
+          </div>
+          <button id="btn-save" type="button" disabled>保存</button>
+          <span id="status" role="status"></span>
+        </header>
+        <section id="editor-pane">
+          <textarea
+            id="source"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="JSON 源码编辑区"
+            placeholder="选择左侧文件开始编辑…"
+          ></textarea>
+        </section>
+        <section id="table-pane" hidden>
+          <div id="table-scroll"></div>
+          <div id="table-add-row">
+            <input id="new-row-id" type="text" placeholder="新记录 id（如 unit.pikeman）" aria-label="新记录 id" />
+            <button id="btn-add-row" type="button">＋ 添加行</button>
+          </div>
+        </section>
+        <section id="bottom-pane">
+          <div id="panel-tabs" role="tablist">
+            <button id="tab-errors" class="tab active" role="tab" type="button">校验错误</button>
+            <button id="tab-diff" class="tab" role="tab" type="button">diff</button>
+            <button id="tab-preview" class="tab" role="tab" type="button">导出预览</button>
+          </div>
+          <div id="panel-errors" class="panel" role="tabpanel"></div>
+          <div id="panel-diff" class="panel" role="tabpanel" hidden></div>
+          <div id="panel-preview" class="panel" role="tabpanel" hidden></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

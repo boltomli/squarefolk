@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"数据工坊主窗口的最小能力集（自定义命令走 invoke_handler，不需额外权限）","local":true,"windows":["main"],"permissions":["core:default"]}}

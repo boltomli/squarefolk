@@ -1,0 +1,21 @@
+{
+  "name": "squarefolk-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Squarefolk 数据工坊 —— Tauri v2 桌面数据编辑器（design §6.1 M4）",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "vite": "vite",
+    "build": "tsc --noEmit && vite build",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}
