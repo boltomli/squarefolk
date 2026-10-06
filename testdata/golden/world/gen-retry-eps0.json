@@ -1,0 +1,147 @@
+{
+  "id": "world/gen-retry-eps0",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.6 步骤 8-9（重试语义：失败 → seed+1 重初始化）",
+  "given": {
+    "fixture": "worldGen",
+    "seed": 10,
+    "h": 10,
+    "w": 10,
+    "world": {
+      "source": "docs/core-spec.md §4.6（T3 冻结 2026-10-06）；初值按 demo 手工图手感反推，**待 sim 校准（D10）**",
+      "minMapSize": 4,
+      "maxMapSize": 64,
+      "terrainWeights": {
+        "water": 150,
+        "plain": 420,
+        "forest": 180,
+        "swamp": 100,
+        "mountain": 150
+      },
+      "smoothRounds": 2,
+      "smoothPriority": [
+        "mountain",
+        "water",
+        "forest",
+        "swamp",
+        "plain"
+      ],
+      "villageCount": 4,
+      "resourceCount": {
+        "beast": 2,
+        "fruit": 4
+      },
+      "resourcePlacement": {
+        "beast": [
+          "plain",
+          "forest"
+        ],
+        "fruit": [
+          "plain"
+        ]
+      },
+      "spawnTerrains": [
+        "plain",
+        "forest"
+      ],
+      "minSpawnEdge": 1,
+      "minReach": 12,
+      "dMin": 4,
+      "epsilon": 0,
+      "retryCap": 32,
+      "spawnCount": 2,
+      "scoreRadius": 3,
+      "wNearVillage": 4,
+      "wResource": 3,
+      "wMobility": 2,
+      "wEdge": 3,
+      "wRuin": 0,
+      "resourceValue": {
+        "fruit": 3,
+        "beast": 2
+      }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "terrain": [
+      ".www.m..ff",
+      ".www....ff",
+      "..ww......",
+      "..m.......",
+      "m.........",
+      "m.........",
+      "..........",
+      "..........",
+      "......w...",
+      ".....www.."
+    ],
+    "villages": [
+      [
+        2,
+        8
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        7,
+        1
+      ]
+    ],
+    "resources": [
+      [
+        0,
+        0,
+        "fruit"
+      ],
+      [
+        3,
+        4,
+        "fruit"
+      ],
+      [
+        6,
+        4,
+        "fruit"
+      ],
+      [
+        6,
+        8,
+        "beast"
+      ],
+      [
+        7,
+        6,
+        "beast"
+      ],
+      [
+        9,
+        8,
+        "fruit"
+      ]
+    ],
+    "spawns": [
+      [
+        2,
+        7
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    "startValues": [
+      -26,
+      -26
+    ],
+    "rngFinal": "9a0dc76e314bcd26",
+    "attempts": 2
+  },
+  "notes": "重试路径分水岭：ε=0 下 attempt0(seed10) 无合法组合 → attempt1(seed11) 命中零差值对（sv 均 -26）→ attempts=2 钉死 seed+t 推进与『限内重试成功』；若实现不重试或不同推进序必红"
+}

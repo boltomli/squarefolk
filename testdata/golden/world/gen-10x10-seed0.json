@@ -1,0 +1,147 @@
+{
+  "id": "world/gen-10x10-seed0",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.6（消耗表+算法体+公平带）",
+  "given": {
+    "fixture": "worldGen",
+    "seed": 0,
+    "h": 10,
+    "w": 10,
+    "world": {
+      "source": "docs/core-spec.md §4.6（T3 冻结 2026-10-06）；初值按 demo 手工图手感反推，**待 sim 校准（D10）**",
+      "minMapSize": 4,
+      "maxMapSize": 64,
+      "terrainWeights": {
+        "water": 150,
+        "plain": 420,
+        "forest": 180,
+        "swamp": 100,
+        "mountain": 150
+      },
+      "smoothRounds": 2,
+      "smoothPriority": [
+        "mountain",
+        "water",
+        "forest",
+        "swamp",
+        "plain"
+      ],
+      "villageCount": 4,
+      "resourceCount": {
+        "beast": 2,
+        "fruit": 4
+      },
+      "resourcePlacement": {
+        "beast": [
+          "plain",
+          "forest"
+        ],
+        "fruit": [
+          "plain"
+        ]
+      },
+      "spawnTerrains": [
+        "plain",
+        "forest"
+      ],
+      "minSpawnEdge": 1,
+      "minReach": 12,
+      "dMin": 4,
+      "epsilon": 10,
+      "retryCap": 32,
+      "spawnCount": 2,
+      "scoreRadius": 3,
+      "wNearVillage": 4,
+      "wResource": 3,
+      "wMobility": 2,
+      "wEdge": 3,
+      "wRuin": 0,
+      "resourceValue": {
+        "fruit": 3,
+        "beast": 2
+      }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "terrain": [
+      "ffffmmmmm.",
+      "ffffmmmmmm",
+      "..ffmmmmmm",
+      "..fffmmmmm",
+      ".ffffmmmmm",
+      "fffffw..mm",
+      "fffww....m",
+      "ffww....mm",
+      ".......mmm",
+      ".......mmm"
+    ],
+    "villages": [
+      [
+        6,
+        7
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        9,
+        3
+      ],
+      [
+        9,
+        5
+      ]
+    ],
+    "resources": [
+      [
+        2,
+        1,
+        "fruit"
+      ],
+      [
+        4,
+        0,
+        "fruit"
+      ],
+      [
+        7,
+        7,
+        "fruit"
+      ],
+      [
+        8,
+        2,
+        "fruit"
+      ],
+      [
+        8,
+        6,
+        "beast"
+      ],
+      [
+        9,
+        4,
+        "beast"
+      ]
+    ],
+    "spawns": [
+      [
+        5,
+        2
+      ],
+      [
+        5,
+        6
+      ]
+    ],
+    "startValues": [
+      -27,
+      -23
+    ],
+    "rngFinal": "9a0dc76e314bcd1b",
+    "attempts": 1
+  },
+  "notes": "基线全图指纹：默认参数全钉（防 balance 调参漂移）。attempts=1、两出生同带（差8≤ε10）、间距4≥dMin、村4/资源6 全落地、rngFinal=成功尝试流终态"
+}

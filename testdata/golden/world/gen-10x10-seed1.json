@@ -1,0 +1,147 @@
+{
+  "id": "world/gen-10x10-seed1",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.6（seed_t = seed + t 语义的 seed=1 入口）",
+  "given": {
+    "fixture": "worldGen",
+    "seed": 1,
+    "h": 10,
+    "w": 10,
+    "world": {
+      "source": "docs/core-spec.md §4.6（T3 冻结 2026-10-06）；初值按 demo 手工图手感反推，**待 sim 校准（D10）**",
+      "minMapSize": 4,
+      "maxMapSize": 64,
+      "terrainWeights": {
+        "water": 150,
+        "plain": 420,
+        "forest": 180,
+        "swamp": 100,
+        "mountain": 150
+      },
+      "smoothRounds": 2,
+      "smoothPriority": [
+        "mountain",
+        "water",
+        "forest",
+        "swamp",
+        "plain"
+      ],
+      "villageCount": 4,
+      "resourceCount": {
+        "beast": 2,
+        "fruit": 4
+      },
+      "resourcePlacement": {
+        "beast": [
+          "plain",
+          "forest"
+        ],
+        "fruit": [
+          "plain"
+        ]
+      },
+      "spawnTerrains": [
+        "plain",
+        "forest"
+      ],
+      "minSpawnEdge": 1,
+      "minReach": 12,
+      "dMin": 4,
+      "epsilon": 10,
+      "retryCap": 32,
+      "spawnCount": 2,
+      "scoreRadius": 3,
+      "wNearVillage": 4,
+      "wResource": 3,
+      "wMobility": 2,
+      "wEdge": 3,
+      "wRuin": 0,
+      "resourceValue": {
+        "fruit": 3,
+        "beast": 2
+      }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "terrain": [
+      "...fff....",
+      "....ff....",
+      "m...f.....",
+      "www.....ff",
+      "www....fff",
+      "w.....mmmm",
+      "w....mmmm.",
+      "www.fmmm..",
+      "wwwwfmm...",
+      "wwwwsmm..."
+    ],
+    "villages": [
+      [
+        2,
+        6
+      ],
+      [
+        5,
+        4
+      ],
+      [
+        6,
+        3
+      ],
+      [
+        9,
+        9
+      ]
+    ],
+    "resources": [
+      [
+        1,
+        1,
+        "beast"
+      ],
+      [
+        1,
+        3,
+        "beast"
+      ],
+      [
+        3,
+        7,
+        "fruit"
+      ],
+      [
+        4,
+        4,
+        "fruit"
+      ],
+      [
+        7,
+        9,
+        "fruit"
+      ],
+      [
+        9,
+        7,
+        "fruit"
+      ]
+    ],
+    "spawns": [
+      [
+        1,
+        2
+      ],
+      [
+        6,
+        1
+      ]
+    ],
+    "startValues": [
+      -53,
+      -60
+    ],
+    "rngFinal": "9a0dc76e314bcd1c",
+    "attempts": 1
+  },
+  "notes": "种子扰动：与 seed0 图必异（同参数不同指纹）；同样 attempts=1、带差7≤10、间距5≥dMin —— 钉死『非对称、非模板』生成"
+}

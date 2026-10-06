@@ -1,0 +1,120 @@
+{
+  "id": "world/gen-6x6-smallparams",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.6 + §6 worldGen（given.world 局部覆盖）",
+  "given": {
+    "fixture": "worldGen",
+    "seed": 0,
+    "h": 6,
+    "w": 6,
+    "world": {
+      "source": "docs/core-spec.md §4.6（T3 冻结 2026-10-06）；初值按 demo 手工图手感反推，**待 sim 校准（D10）**",
+      "minMapSize": 4,
+      "maxMapSize": 64,
+      "terrainWeights": {
+        "water": 150,
+        "plain": 420,
+        "forest": 180,
+        "swamp": 100,
+        "mountain": 150
+      },
+      "smoothRounds": 2,
+      "smoothPriority": [
+        "mountain",
+        "water",
+        "forest",
+        "swamp",
+        "plain"
+      ],
+      "villageCount": 2,
+      "resourceCount": {
+        "beast": 1,
+        "fruit": 2
+      },
+      "resourcePlacement": {
+        "beast": [
+          "plain",
+          "forest"
+        ],
+        "fruit": [
+          "plain"
+        ]
+      },
+      "spawnTerrains": [
+        "plain",
+        "forest"
+      ],
+      "minSpawnEdge": 1,
+      "minReach": 4,
+      "dMin": 3,
+      "epsilon": 20,
+      "retryCap": 8,
+      "spawnCount": 2,
+      "scoreRadius": 3,
+      "wNearVillage": 4,
+      "wResource": 3,
+      "wMobility": 2,
+      "wEdge": 3,
+      "wRuin": 0,
+      "resourceValue": {
+        "fruit": 3,
+        "beast": 2
+      }
+    }
+  },
+  "expect": {
+    "ok": true,
+    "terrain": [
+      "mm...m",
+      "mm..mm",
+      "mm.mmm",
+      "..mmmm",
+      "..mmww",
+      "..ffww"
+    ],
+    "villages": [
+      [
+        0,
+        3
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "resources": [
+      [
+        0,
+        4,
+        "fruit"
+      ],
+      [
+        4,
+        0,
+        "fruit"
+      ],
+      [
+        5,
+        3,
+        "beast"
+      ]
+    ],
+    "spawns": [
+      [
+        1,
+        2
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "startValues": [
+      10,
+      7
+    ],
+    "rngFinal": "f519f86ee2385b72",
+    "attempts": 1
+  },
+  "notes": "小图+覆盖参数：6×6 默认 minReach12 无解（33 连败=超限），覆盖 minReach4/dMin3/ε20/村2/资源3 后 attempts=1 —— 同时钉『覆盖回落语义』与小尺寸路径；带差3、间距3"
+}
