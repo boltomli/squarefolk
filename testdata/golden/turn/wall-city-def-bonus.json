@@ -1,0 +1,229 @@
+{
+  "id": "turn/wall-city-def-bonus",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.4 城防+2 条件（hasWall ⇒ +2；design C4）+ §4.1-B 城/姿态派生",
+  "given": {
+    "fixture": "actionApply",
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      },
+      {
+        "id": "unit.000002",
+        "owner": "B",
+        "type": "unit.medic",
+        "x": 1,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 0,
+        "def10": 10,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          0,
+          1
+        ],
+        "homeCity": "city.000002",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 3,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      },
+      "unit.medic": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 0,
+        "def10": 10,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          0,
+          1
+        ],
+        "siegeDamage": 0
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "attack",
+      "unitId": "unit.000001",
+      "targetId": "unit.000002"
+    }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": true,
+        "healed": false
+      },
+      {
+        "id": "unit.000002",
+        "owner": "B",
+        "type": "unit.medic",
+        "x": 1,
+        "y": 1,
+        "hp": 7,
+        "maxHp": 10,
+        "atk10": 0,
+        "def10": 10,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          0,
+          1
+        ],
+        "homeCity": "city.000002",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 3,
+        "isCapital": true
+      }
+    ],
+    "winner": null
+  },
+  "notes": "城防满配（有墙）手推 —— **被围城防加成失效（§4.4 已定）**：u1 贴城即 c2 被围 → 城+10 归 0；守方 def10_eff = 10 + 姿态10 + 墙20 = 40 → M(40)=52；伤害 = 20×3×20×52/20000 = 62400/20000 → rhu = 3.62 → 3 → 医疗兵 10→7（p=0 反击 0、不补位）。与 city-def-no-wall（def 20 → 伤害 5）成对：墙 +20 def10 → M 52 vs 76 → 伤害 3 vs 5 —— 钉死「墙在与不在」+「被围城防失效」两条"
+}

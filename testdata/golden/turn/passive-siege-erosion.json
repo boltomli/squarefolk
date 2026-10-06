@@ -1,0 +1,39 @@
+{
+  "id": "turn/passive-siege-erosion",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §3.1 commit-1 + §4.4 D6 被动围城侵蚀（≥2 相邻 → −1）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "A", "type": "unit.warrior", "x": 1, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": true, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 1, "y": 1, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": true, "wallDurability": 3, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 0, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "siegeDamage": 1 } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "B", "turn": 7, "phase": "act",
+    "action": { "type": "endTurn" }
+  },
+  "expect": {
+    "rejected": false,
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 1, "y": 1, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": true, "wallDurability": 2, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+    ],
+    "turn": 8,
+    "currentPlayer": "A"
+  },
+  "notes": "被动侵蚀在被围方（B）commit：c2 相邻敌 u1(0,1)+u2(1,0) = 2 ≥ 2 → dur 3→2（未触 0 不翻墙）；B 有城 → noCityTurns 保持 0；回绕 → A prep 收入 = L1+首都 = 2（A 的 c1 无 B 兵相邻、未被围）→ stars 0→2；turn 7→8"
+}

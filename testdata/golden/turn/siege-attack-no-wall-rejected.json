@@ -1,0 +1,118 @@
+{
+  "id": "turn/siege-attack-no-wall-rejected",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.4 D6 攻城拒绝（hasWall=false → 无墙可攻）",
+  "given": {
+    "fixture": "actionApply",
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "attack",
+      "unitId": "unit.000001",
+      "targetId": "city.000002"
+    }
+  },
+  "expect": {
+    "rejected": true
+  },
+  "notes": "无墙敌城不可攻城：c2 hasWall=false → attack cityId 拒绝（单测另钉 reason 逐字「attack: 无墙可攻（wallDurability=0）（§4.4）」）；其余谓词全绿（相邻/可见/未行动/城空）→ 只剩墙这一个变量；状态零变化"
+}

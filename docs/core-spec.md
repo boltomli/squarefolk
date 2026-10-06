@@ -56,8 +56,8 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 
 | action | payload | 附加谓词与后效 |
 | --- | --- | --- |
-| `move` | `unitId, x, y` | `!moved && (!attacked || unit.canMoveAfterAttack) && !healed`（技能字段默认 false = 现行"攻击即结束回合"，design v0.14）；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）；**目标为敌方城格时另需满足 §4.4 占领门**（`wallDuracity ≤ 0` 且起点与该城相邻）→ 落地后 `moved = true`（占领门违反 → `move: 敌城未破或需从相邻格进入（§4.4）`） |
-| `attack` | `unitId, target(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove \|\| !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E）。**`target = cityId` 分支 = §4.4 主动攻城**（城格须空、削 `wallDuracity`、非战斗结算；谓词与拒绝理由见 §4.4） |
+| `move` | `unitId, x, y` | `!moved && (!attacked || unit.canMoveAfterAttack) && !healed`（技能字段默认 false = 现行"攻击即结束回合"，design v0.14）；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）；**目标为敌方城格时另需满足 §4.4 占领门**（`wallDurability ≤ 0` 且起点与该城相邻）→ 落地后 `moved = true`（占领门违反 → `move: 敌城未破或需从相邻格进入（§4.4）`） |
+| `attack` | `unitId, targetId(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove \|\| !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E）。**`targetId = cityId` 分支 = §4.4 主动攻城**（城格须空、削 `wallDurability`、非战斗结算；谓词与拒绝理由见 §4.4） |
 | `train` | `cityId, unitType`（载荷键 **`unitType`** —— 与 §6 判别键 `type` 避撞，2026-10-05 修正） | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`unitType` 已解锁；`stars ≥ cost(unitType)`；城上格为空（T2） |
 | `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（§4.3 领地）；科技已解锁 → 资源移除，按 data 给人口或星星 |
 | `build` | `unitId, kind` | 目标格在**己方领土**（§4.3 领地；**道路例外**：中立地可修、敌方领土不可）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
@@ -80,7 +80,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 **行动阶段 `act`**：玩家反复提交动作；每个动作走 3.2 管线。
 
 **提交阶段 `commit`（endTurn）**
-1. **围城推进（§4.4 D6 耐久制）**：按 `cities` id 序对每个被围城（`besieged` 衍生量 = 存在相邻敌单位）结算 —— **图内相邻敌军 ≥2 → `wallDuracity −1`**（下限 0；`hasWall=false` 恒 0 跳过）
+1. **围城推进（§4.4 D6 耐久制）**：按 `cities` id 序对每个被围城（`besieged` 衍生量 = 存在相邻敌单位）结算 —— **图内相邻敌军 ≥2 → `wallDurability −1`**（下限 0；`hasWall=false` 恒 0 跳过）
 2. **无城宽限计数（T4，§4.7）**：提交玩家城市数为 0 → `noCityTurns += 1`，`≥ eliminationGraceTurns`（∈ balance，默认 5）→ `eliminated = true` **并移除其全部残余单位**；有城 → `noCityTurns = 0`（占城瞬间亦清零，§4.7）
 3. `currentPlayer` 下移并**跳过已淘汰玩家**（提交者自身被淘汰则继续下移）；越过末位 → `turn += 1` → 回 `prep`；若场上只剩一个未淘汰玩家 → 征服模式按 §4.7 判定（其应已持有全部首都）
 4. 已提交玩家本回合再收动作 → 拒绝
@@ -170,7 +170,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 1. 汇总双方加成（B）→ 2. 计算 `damage` 并落地 → 3. 判定守方存活 →
 4a. 存活 → `counter(k=1)` 落地；4b. 阵亡 → `counter(k=4)` 落地 →
-5. **击杀结算**：`killSwap`（单位数据字段，v1 约定近战 `true`、远程 `false`）→ 目标格可进入则攻方补位（**敌方城格 = §4.4 占领门：`wallDuracity > 0` → 补位受阻、攻方留原地**）；晋升计数 +1，达到 `promotion.kills`（配置，默认 3）且未晋升过 → `atk10+10、def10+10`（**不加 HP**）→
+5. **击杀结算**：`killSwap`（单位数据字段，v1 约定近战 `true`、远程 `false`）→ 目标格可进入则攻方补位（**敌方城格 = §4.4 占领门：`wallDurability > 0` → 补位受阻、攻方留原地**）；晋升计数 +1，达到 `promotion.kills`（配置，默认 3）且未晋升过 → `atk10+10、def10+10`（**不加 HP**）→
 6. 攻方 `acted = true`，本回合该单位行动结束。
 
 #### E. 回合内语义（引自 design，此处冻结为规格）
@@ -289,20 +289,20 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 **D6 · 耐久制（冻结）**
 
-- **城墙**：`hasWall → wallDuracity ∈ 0..3`；城市防御 **+2 仅当 `hasWall && wallDuracity > 0`**（design C4「耐久未耗尽才有加成」—— combat 派生侧照此条件）
-- **被动围城（§3.1 commit-1 围城推进）**：被围方**回合结束**时，对每个被围城统计**图内相邻敌军**（含被围方自身城格 8 邻域内敌单位）：**≥2 → `wallDuracity −1`**（下限 0；无墙城恒 0 不变）
-- **主动攻城（`attack` 的 `target = cityId` 分支）**：城为敌方、**城格无守军**、切比雪夫 ≤ `range`、attack 公共谓词（`!attacked && (canAttackAfterMove || !moved)`、目标可见）→ **不走战斗结算**，直接 `wallDuracity −= siegeDamage[unitType]`（下限 0）→ `attacked = true`
+- **城墙与不变量**：`hasWall ⇔ wallDurability ∈ 1..3`（§1 既有不变量，**dur 不存在 0 带墙态**）→ **任何路径把耐久削到 0 = 墙破**：`hasWall = false, wallDurability = 0`（可 `upgrade-wall` 重筑）；城市防御 **+2 仅当 `hasWall`**（不变量下 ≡ `wallDurability > 0`，design C4 语义）
+- **被动围城（§3.1 commit-1 围城推进）**：被围方**回合结束**时，对每个被围城统计**图内相邻敌军**（含被围方自身城格 8 邻域内敌单位）：**≥2 → `wallDurability −1`；触 0 → 墙破（`hasWall=false`）**（无墙城跳过）
+- **主动攻城（`attack` 的 `targetId = cityId` 分支）**：城为敌方、**城格无守军**、切比雪夫 ≤ `range`、attack 公共谓词（`!attacked && (canAttackAfterMove || !moved)`、目标可见）→ **不走战斗结算**，直接 `wallDurability −= siegeDamage[unitType]`；**触 0 → 墙破（`hasWall=false`）** → `attacked = true`
   - `siegeDamage` ∈ **单位内容数据**（`units.json` 字段，缺省 0）：v1 = warrior 1 / scout 1 / knight 1（投石未来 2）
-  - `wallDuracity ≤ 0`（含无墙城）→ 拒绝：`attack: 无墙可攻（wallDuracity=0）（§4.4）`
+  - `hasWall = false`（无墙）→ 拒绝：`attack: 无墙可攻（wallDurability=0）（§4.4）`
   - `siegeDamage` 缺省或为 0 → 拒绝：`attack: ${unitType} 无攻城能力（siegeDamage=0）（§4.4）`
-  - **城上有守军 → 正常战斗**（target 必须是 unitId，城市防御按上行条件加成）
+  - **城上有守军 → 正常战斗**（targetId 必须是 unitId，城市防御按上行条件加成）
 - **占领门（move 目标 = 敌方城格，城格须空）**，三条件同时满足：
-  1. `wallDuracity ≤ 0`（无墙城天然满足）
+  1. **`hasWall = false`**（不变量下 ≡ `wallDurability ≤ 0`；无墙城天然满足）
   2. **从相邻格进入**（move 起点切比雪夫 = 1）—— 逼近需花一整回合落位相邻、当回合不可二次移动 → **"围城停留一回合"由此无状态涌现**（不新增状态字段，遵守"衍生量不入状态"）
   3. 城格无单位（`move` 公共谓词既有）
   - 违反 → 拒绝：`move: 敌城未破或需从相邻格进入（§4.4）`
-  - **killSwap 同受此门约束**：击杀城上守军后补位 = 从相邻进入，`wallDuracity > 0` → **补位受阻、攻方留原地**（§4.1-5「目标格可进入」的敌城语义）
-- **占领落地效果**（move 进入即占领，`village=false` 语义之外的城市版）：`owner = 占领方`、`level` 保留、`population = max(0, population − 1)`、`isCapital` 不变、`workshop` 保留、**`hasWall = false, wallDuracity = 0`**（墙随城破，可通过 upgrade-wall 重筑）、原守军逐出（若占领路径上城格有兵则该路径本就非法，逐出规则留给未来路径）、占领方 `noCityTurns = 0`（§4.7 占城瞬间清零）
+  - **killSwap 同受此门约束**：击杀城上守军后补位 = 从相邻进入，`hasWall = true` → **补位受阻、攻方留原地**（§4.1-5「目标格可进入」的敌城语义）
+- **占领落地效果**（move 进入即占领，`village=false` 语义之外的城市版）：`owner = 占领方`、`level` 保留、`population = max(0, population − 1)`、`isCapital` 不变、`workshop` 保留、**`hasWall = false, wallDurability = 0`**（墙随城破，可通过 upgrade-wall 重筑）、原守军逐出（若占领路径上城格有兵则该路径本就非法，逐出规则留给未来路径）、占领方 `noCityTurns = 0`（§4.7 占城瞬间清零）
 - **胜利**：占领后立即走 §3.2 胜利检查 —— 持有全部首都 → 征服胜利（T4 宽限不豁免该判定）
 
 ### 4.5 视野与迷雾（展开，design §2.5）
@@ -412,14 +412,15 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 ### 围城与占领（D6 耐久制，2026-10-06 拍板；✅ = 向量已落地）
 
-- [ ] 主动攻城：`attack cityId` 削 `wallDuracity`（`siegeDamage` 默认 1）、`attacked=true`、非战斗结算 → `turn/siege-attack-dur`
-- [ ] 攻城拒绝两路：耐久已 0 / 无墙、`siegeDamage=0` → `turn/siege-attack-no-wall-rejected`（+ 单测理由逐字）
-- [ ] 被动围城侵蚀：被围方 commit 相邻敌 ≥2 → `wallDuracity −1`（下限 0、无墙跳过）→ `turn/passive-siege-erosion`
-- [ ] 占领门：`wallDuracity>0` 拒进、**非相邻起点拒进**（无状态涌现的围城一回合）→ `turn/capture-not-adjacent-rejected`
+- [ ] 主动攻城：`attack targetId=cityId` 削 `wallDurability`、触 0 墙破翻转、`attacked=true`、非战斗结算 → `turn/siege-attack-break-wall`
+- [ ] 攻城拒绝两路：无墙 → ✅ `turn/siege-attack-no-wall-rejected`（reason 逐字单测待 D）；`siegeDamage=0` → 单测
+- [ ] 被动围城侵蚀：被围方 commit 相邻敌 ≥2 → −1（触 0 墙破）→ `turn/passive-siege-erosion`
+- [ ] 占领门条件 1（`hasWall=true` 拒进）→ `turn/capture-walled-rejected`
+- [ ] 占领门条件 2（**非相邻起点拒进**，无状态涌现的围城一回合）→ `turn/capture-not-adjacent-rejected`
 - [ ] 占领落地：owner 易主、level 保留、pop−1 下限 0、墙清除、`noCityTurns` 清零 → `turn/capture-move-in`
 - [ ] killSwap 撞门：城上守军被杀但墙未破 → 补位受阻留原地 → `turn/killswap-blocked-by-wall`
 - [ ] 征服触发：占领最后一座敌首都 → `winner`（T4 不豁免）→ `turn/capture-conquest`
-- [ ] 城防 +2 条件 = `hasWall && wallDuracity > 0`（combat 派生侧；耐久 0 时无加成）→ 战斗向量补一例
+- [ ] 城防 +2 条件（被围城防失效 + 墙在/不在成对）→ ✅ `turn/wall-city-def-bonus`（def40→3）+ ✅ `turn/city-def-no-wall`（def20→5）
 
 ### 状态与日志
 

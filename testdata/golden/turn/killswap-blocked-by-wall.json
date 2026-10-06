@@ -1,0 +1,206 @@
+{
+  "id": "turn/killswap-blocked-by-wall",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1-5 killSwap 敌城语义 + §4.4 占领门（墙未破 → 补位受阻）",
+  "given": {
+    "fixture": "actionApply",
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      },
+      {
+        "id": "unit.000002",
+        "owner": "B",
+        "type": "unit.medic",
+        "x": 1,
+        "y": 1,
+        "hp": 1,
+        "maxHp": 10,
+        "atk10": 0,
+        "def10": 10,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          0,
+          1
+        ],
+        "homeCity": "city.000002",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 3,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      },
+      "unit.medic": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 0,
+        "def10": 10,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          0,
+          1
+        ],
+        "siegeDamage": 0
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "attack",
+      "unitId": "unit.000001",
+      "targetId": "unit.000002"
+    }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 1,
+        "promoted": false,
+        "moved": false,
+        "attacked": true,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 3,
+        "isCapital": true
+      }
+    ],
+    "winner": null
+  },
+  "notes": "killSwap 撞墙门：守军医疗兵 hp1 站在 hasWall=true/dur3 的城上 —— 伤害手推：被围城防失效 → def = 10 + 姿态10 + 墙20 = 40 → M=52；E=10+1=11 → 20×3×11×52/20000 = 34320/20000 → rhu = 2.21 → 2 → 守军死（p=0 反击 0）；melee killSwap=true 但目标格是未破敌城 → **补位受阻、攻方留 (0,1)**；kills 0→1、attacked=true；城仍归 B、墙满 3；无征服"
+}

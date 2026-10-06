@@ -1,0 +1,194 @@
+{
+  "id": "turn/siege-attack-break-wall",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.4 D6 主动攻城 + 墙破触0翻转 + §1 不变量 hasWall⇔dur∈1..3",
+  "given": {
+    "fixture": "actionApply",
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 1,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 1,
+        "isCapital": false
+      },
+      {
+        "id": "city.000003",
+        "x": 2,
+        "y": 2,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "attack",
+      "unitId": "unit.000001",
+      "targetId": "city.000002"
+    }
+  },
+  "expect": {
+    "rejected": false,
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": true,
+        "wallDurability": 1,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": false
+      },
+      {
+        "id": "city.000003",
+        "x": 2,
+        "y": 2,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
+    ],
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": true,
+        "healed": false
+      }
+    ],
+    "winner": null
+  },
+  "notes": "主动攻城削耐久触 0 = 墙破：dur 1 − siegeDamage(warrior)=1 → 0 → hasWall 必须翻 false（不变量 hasWall⇔dur∈1..3 不许 0 带墙态）；非战斗结算（攻方 hp 不动、守方无兵）；attacked=true；c2 非首都、B 另有首都 c3 → 无征服"
+}

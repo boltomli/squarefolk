@@ -1,0 +1,119 @@
+{
+  "id": "turn/capture-not-adjacent-rejected",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.4 占领门条件 2（须从相邻格进入 —— 无状态涌现的围城一回合）",
+  "given": {
+    "fixture": "actionApply",
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
+    "units": [
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 0,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
+    ],
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 0,
+        "y": 2,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "move",
+      "unitId": "unit.000001",
+      "x": 0,
+      "y": 2
+    }
+  },
+  "expect": {
+    "rejected": true
+  },
+  "notes": "非相邻起点拒进（隔离占领门条件 2）：c2 位于 (0,2)、u1 起点 (0,0) —— 切比雪夫 2（对角线距离会混淆，此处直距 2）且 warrior move=2 可达（公共谓词✓）；c2 无墙（条件1✓）、城空（条件3✓）、目标在 A 首都 (0,0) 视野半径 2 内（可见✓）→ 唯一失败点 = 起点与城不相邻（须先落位相邻、下回合再进 ——『围城一回合』无状态涌现）；状态零变化"
+}
