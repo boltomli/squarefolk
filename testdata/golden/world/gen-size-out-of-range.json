@@ -1,0 +1,71 @@
+{
+  "id": "world/gen-size-out-of-range",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.6 尺寸合法性（最先判定，裁 P10 上报项 2）",
+  "given": {
+    "fixture": "worldGen",
+    "seed": 0,
+    "h": 3,
+    "w": 6,
+    "world": {
+      "source": "docs/core-spec.md §4.6（T3 冻结 2026-10-06）；初值按 demo 手工图手感反推，**待 sim 校准（D10）**",
+      "minMapSize": 4,
+      "maxMapSize": 64,
+      "terrainWeights": {
+        "water": 150,
+        "plain": 420,
+        "forest": 180,
+        "swamp": 100,
+        "mountain": 150
+      },
+      "smoothRounds": 2,
+      "smoothPriority": [
+        "mountain",
+        "water",
+        "forest",
+        "swamp",
+        "plain"
+      ],
+      "villageCount": 4,
+      "resourceCount": {
+        "beast": 2,
+        "fruit": 4
+      },
+      "resourcePlacement": {
+        "beast": [
+          "plain",
+          "forest"
+        ],
+        "fruit": [
+          "plain"
+        ]
+      },
+      "spawnTerrains": [
+        "plain",
+        "forest"
+      ],
+      "minSpawnEdge": 1,
+      "minReach": 12,
+      "dMin": 4,
+      "epsilon": 10,
+      "retryCap": 32,
+      "spawnCount": 2,
+      "scoreRadius": 3,
+      "wNearVillage": 4,
+      "wResource": 3,
+      "wMobility": 2,
+      "wEdge": 3,
+      "wRuin": 0,
+      "resourceValue": {
+        "fruit": 3,
+        "beast": 2
+      }
+    }
+  },
+  "expect": {
+    "ok": false,
+    "reason": "world: 尺寸超界（h=3, w=6；minMapSize=4, maxMapSize=64）",
+    "attempts": 0
+  },
+  "notes": "尺寸越界：h=3 < minMapSize=4 → 立即 {ok:false, reason 模板逐字, attempts:0}，不消耗 RNG 不进重试（attempts=0 是与『重试超限 attempts=retryCap+1』的区分位）"
+}

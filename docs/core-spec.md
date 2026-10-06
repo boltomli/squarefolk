@@ -309,6 +309,8 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 **确定性与 RNG 作用域**：`generate(seed, h, w)` 内，每次**尝试 attempt t**（t 从 0 起）用 `seed_t = seed + t`（u64 回绕）**重新初始化** splitmix64 单流；该尝试内**消耗顺序固定**（下表），成功选定出生点后该流**冻结**（战斗/回合永不触碰）。所有数组遍历一律**行主序**（y 0..h-1、x 0..w-1），集合先显式排序再取用（红线：不依赖迭代序）。
 
+**尺寸合法性（最先判定）**：`h ∉ [minMapSize, maxMapSize]` 或 `w ∉ [minMapSize, maxMapSize]` → **立即返回** `{ ok:false, reason: "world: 尺寸超界（h=${h}, w=${w}；minMapSize=${min}, maxMapSize=${max}）", attempts: 0 }` —— 不消耗 RNG、不进入重试（2026-10-06 补，裁 P10 上报项 2）。
+
 **消耗表（每尝试 attempt t 内）**
 
 | # | 阶段 | 消耗 | 次数 |
@@ -326,19 +328,19 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 2. **元胞平滑** `smoothRounds` 轮（默认 2）：**Jacobi 同步更新**（每轮新值全部取自旧快照，禁就地）；新值 = 3×3 邻域（仅计图内格）内出现次数最多的地形类，**平票 → `smoothPriority` 中靠前者胜**（∈ balance，如 `mountain > water > forest > swamp > plain`）。
 3. **最大连通陆块**：非水格按 **8-邻**（切比雪夫，与移动一致）求连通分量；取**最大**分量（平票 → 行主序先遇到者，`size > best` 才替换）；分量外的陆格全部改**水**。零抽。
 4. **村庄布置**：候选 = `plain` 且未占用（行主序排序）；对每个目标村：抽 `d` → `候选[d mod |候选|]` 放置并移出候选（**每抽前重排序？否 —— 移除保持剩余列表行主序**）；候选枯竭则停止，实放数可 < 目标（**不报错**，向量钉实际数）。
-5. **资源布置**：kind 按 id 升序（`beast` → `fruit`）；候选 = 地形 ∈ `resourcePlacement[kind]` 且未被村/资源占用（行主序）；同 mod 取点法；枯竭提前停不报错。
+5. **资源布置**：kind 按 id 升序（`beast` → `fruit`）；候选 = 地形 ∈ `resourcePlacement[kind]` 且未被村/资源占用（行主序）；同 mod 取点法；**某 kind 候选枯竭 → 该 kind 提前停、继续下一 kind**（不中断整体布置，2026-10-06 裁 P10 上报项 3），不报错。
 6. **出生点候选** C（行主序）：地形 ∈ `spawnTerrains`；距图边切比雪夫 ≥ `minSpawnEdge`；**非村庄、非资源格**；所在**连通陆地分量（含山地的全部非水格）规模 ≥ `minReach`**（防"两边一样烂"的死局角 —— 对 design 流程的唯一增补，2026-10-06 拍板）。
 7. **评分**（全整数，仅比例处用 §0 `round_half_up`）：
 
    ```
-   start_value(c) = −w1·near(c) + w2·res(c) + w3·mob1000(c) ÷ 100 + w5·ruins(c) − w4·edgePen(c)
+   start_value(c) = −w1·near(c) + w2·res(c) + ⌊(w3·mob1000(c)) ÷ 100⌋ + w5·ruins(c) − w4·edgePen(c)
    near(c)    = Σ_{v∈villages} minChebyshev(c, v)        # 无村 → 0
    res(c)     = Σ resourceValue[kind]（chebyshev ≤ scoreRadius 内的资源）
    mob1000(c) = round_half_up(1000 × 邻域内非水格数, 邻域内图内格数)   # 邻域 = scoreRadius 切比雪夫、地图裁剪
    edgePen(c) = max(0, scoreRadius − minChebyshevToBorder(c))
    ruins(c)   = 0   # v1 无遗迹载体（T7），公式槽保留、w5 恒 0
    ```
-   权重 `w1..w5`、`scoreRadius` 全 ∈ `balance.world`；`mob1000 ÷ 100` 为整数除法（向零截断，值域 0..10×w3）。
+   权重 `w1..w5`、`scoreRadius` 全 ∈ `balance.world`；**mobility 项结合律钉死 = 先乘后截断**（`⌊(w3·mob1000)/100⌋` 向零截断，值域 0..10×w3 —— 2026-10-06 裁 P10 上报项 1，冻结向量 `gen-10x10-seed0` 判定）。
 8. **公平带挑选**：取 `spawnCount`（v1 = 2，∈ [2,4]）元组合 —— 按**索引递增的字典序**枚举（基于行主序候选表）；合法条件：两两切比雪夫 ≥ `dMin` 且 `max(start_value) − min(start_value) ≤ ε`。合法组合非空 → **抽 1 次 `idx = rng.u64() mod |组合s|`，选 `组合s[idx]`**（带内等概率：公平由约束保证、不可预测由随机保证，v1 接受取模偏差）；出生点输出按行主序排序。`|C| < spawnCount` 或无合法组合 → **本尝试失败**。
 9. **重试与终态**：失败 → `t+1`，`seed_{t} = seed + t`；`t` 超过 `balance.world.retryCap` → 返回 `{ ok:false, reason: "world: 公平带无解（重试超限）" }`（**报错而非硬塞**，design §2.6-5）。成功 → `{ ok:true, terrain, villages, resources, spawns, attempts = t+1, startValues, rngFinal }`（`rngFinal` = 成功尝试消耗完毕后的流状态，u64 十六 hex 小写）。
 10. **参数**（`balance.world`，初值**待 sim 校准** = D10 的活）：`terrainWeights / smoothRounds / smoothPriority / villageCount / resourceCount / resourcePlacement / spawnTerrains / minSpawnEdge / minReach / dMin / epsilon / retryCap / spawnCount / scoreRadius / wNearVillage / wResource / wMobility / wEdge / wRuin / resourceValue / minMapSize / maxMapSize`。
