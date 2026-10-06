@@ -273,3 +273,77 @@ ul.techs li.done { font-size: 13px; color: var(--accent); padding: 4px 2px; }
   #endTurn { margin-left: 0; flex: 1 1 100%; }
   .brand { flex: 1 1 auto; }
 }
+
+/* ── Phase 12 对战壳（单人 vs Bot） ── */
+
+/* 模式选择屏 */
+#start { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.startcard { width: min(94vw, 470px); }
+.startcard h1 { margin: 0 0 6px; font-size: 24px; }
+.seedrow { display: flex; gap: 8px; align-items: stretch; }
+.seedrow input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #2b3048;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+}
+.seedrow .act { width: auto; flex: 0 0 auto; }
+
+/* 可攻击目标（敌兵 / 敌城）：红框，与 reach 绿框、sel 黄框区分 */
+.cell.attack { box-shadow: inset 0 0 0 2px #ff6b6b; }
+.cell.attack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: rgba(255, 107, 107, 0.22);
+  box-shadow: inset 0 0 0 2px #ff6b6b;
+  pointer-events: none;
+}
+/* 既可达又可攻（如未破的敌城格）：外绿内红，两个高亮都在 */
+.cell.attack.reach { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 5px #ff6b6b; }
+
+/* 敌方单位（仅 visible 格出现）：红描边做敌我区分，不承载状态信息 */
+.unit.enemy { outline: 2px solid #ff6b6b; outline-offset: 1px; border-radius: 4px; }
+
+/* 被拒面板按钮：core 拒绝原话逐字上屏 */
+.act small.deny { color: #ff9b9b; word-break: break-all; font-size: 10px; }
+
+/* 淘汰 / 无城宽限提示（§4.7 T4） */
+#warn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: #3a2f14;
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  word-break: break-all;
+}
+
+/* 回合归属（bot 行动中高亮成蓝） */
+.stat.phase { font-weight: 700; }
+.stat.phase.bot { color: #5bc0ff; }
+
+/* 新局按钮（对战）与禁用态的结束回合 */
+button.ghost {
+  padding: 6px 10px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+button.ghost:hover { color: var(--text); border-color: var(--muted); }
+#endTurn:disabled { opacity: 0.5; cursor: not-allowed; }
+#endTurn:disabled:active { transform: none; }

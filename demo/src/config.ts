@@ -6,6 +6,7 @@
  * 数据正确性由 `npm run validate` / `tools/validate.mjs` 把关（schema + 交叉引用）。
  */
 import type { ActionContext } from '../../core/src/actions';
+import balanceData from '../../data/balance.json';
 import improvementsData from '../../data/improvements.json';
 import resourcesData from '../../data/resources.json';
 import techsData from '../../data/techs.json';
@@ -19,6 +20,12 @@ export const START_STARS = 5;
  * 狩猎 → 🐗 采集（+2⭐）路径首回合可见，避免"野猪没反应"的误解。
  */
 export const START_TECHS: readonly string[] = ['tech.orchard', 'tech.hunt'];
+
+/**
+ * T4 淘汰宽限回合数（data/balance.json elimination 段唯一事实源）。
+ * 壳层只用它拼提示文案（「无城 N/5 回合」）；判定在 core §4.7 / §3.1 commit-2。
+ */
+export const ELIMINATION_GRACE = balanceData.elimination.eliminationGraceTurns;
 
 /**
  * 表现层城市配色 + 徽记字母（仅 presentation；不参与任何规则判定）。
