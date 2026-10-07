@@ -1,0 +1,35 @@
+{
+  "id": "turn/train-under-siege",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 train（被围城也可训练）/ §4.4 被围期间清单（2026-10-07 拍板：围城允许防守方招兵）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "B", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 },
+      { "id": "B", "stars": 0, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "B", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [
+      { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 },
+      { "id": "B", "stars": 0, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 }
+    ],
+    "winner": null
+  },
+  "notes": "被围城可训练（2026-10-07 拍板，撤「未被围」谓词）：敌兵 (1,1) 与 c1 (0,0) 切比雪夫 1 = 被围（收入 0/治疗封/城防失效照旧，唯独 train 放行 —— 守城招兵出口）；驻留 0 < 2 ✓、城上格空 ✓、stars 5 ≥ 3 ✓ → 新兵 unit.000002 出生城格、homeCity=c1、stars 5−3=2；新兵站上城格后再招被 T2 挡（每城一兵节奏）。旧实现 isBesieged 拒 → 本向量红"
+}

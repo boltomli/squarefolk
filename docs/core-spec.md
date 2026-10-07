@@ -58,7 +58,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 | --- | --- | --- |
 | `move` | `unitId, x, y` | `!moved && (!attacked || unit.canMoveAfterAttack) && !healed`（技能字段默认 false = 现行"攻击即结束回合"，design v0.14）；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）；**目标为敌方城格时另需满足 §4.4 占领门**（`wallDurability ≤ 0` 且起点与该城相邻）→ 落地后 `moved = true`（占领门违反 → `move: 敌城未破或需从相邻格进入（§4.4）`） |
 | `attack` | `unitId, targetId(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove \|\| !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E）。**`targetId = cityId` 分支 = §4.4 主动攻城**（城格须空、削 `wallDurability`、非战斗结算；谓词与拒绝理由见 §4.4） |
-| `train` | `cityId, unitType`（载荷键 **`unitType`** —— 与 §6 判别键 `type` 避撞，2026-10-05 修正） | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level + 1`（**容量 = 城级 + 1** —— 初始兵占 1 坑、每城常留 1 个训练坑；2026-10-07 修正「就差1」）；`unitType` 已解锁；`stars ≥ cost(unitType)`；城上格为空（T2） |
+| `train` | `cityId, unitType`（载荷键 **`unitType`** —— 与 §6 判别键 `type` 避撞，2026-10-05 修正） | 城属本方（**被围城也可训练** —— 守城招兵，2026-10-07 拍板）；该城 `homeCity` 驻留数 < `level + 1`（**容量 = 城级 + 1** —— 初始兵占 1 坑、每城常留 1 个训练坑；2026-10-07 修正「就差1」）；`unitType` 已解锁；`stars ≥ cost(unitType)`；城上格为空（T2） |
 | `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（§4.3 领地）；科技已解锁 → 资源移除，按 data 给人口或星星 |
 | `build` | `unitId, kind` | 目标格在**己方领土**（§4.3 领地；**道路例外**：中立地可修、敌方领土不可）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
 | `research` | `techId` | 未研究、前置已满足、`stars ≥ cost`（§4.3 公式） |
@@ -82,7 +82,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 **提交阶段 `commit`（endTurn）**
 1. **围城推进（§4.4 D6 耐久制）**：按 `cities` id 序对每个被围城（`besieged` 衍生量 = 存在相邻敌单位）结算 —— **图内相邻敌军 ≥2 → `wallDurability −1`**（下限 0；`hasWall=false` 恒 0 跳过）
 2. **无城宽限计数（T4，§4.7）**：提交玩家城市数为 0 → `noCityTurns += 1`，`≥ eliminationGraceTurns`（∈ balance，默认 5）→ `eliminated = true` **并移除其全部残余单位**；有城 → `noCityTurns = 0`（占城瞬间亦清零，§4.7）
-3. `currentPlayer` 下移并**跳过已淘汰玩家**（提交者自身被淘汰则继续下移）；越过末位 → `turn += 1` → 回 `prep`；若场上只剩一个未淘汰玩家 → 征服模式按 §4.7 判定（其应已持有全部首都）
+3. `currentPlayer` 下移并**跳过已淘汰玩家**（提交者自身被淘汰则继续下移）；越过末位 → `turn += 1` → 回 `prep`；若场上只剩一个未淘汰玩家 → 按 §4.7 判定胜利（淘汰制征服）
 4. 已提交玩家本回合再收动作 → 拒绝
 
 ### 3.2 单动作管线
@@ -284,7 +284,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 **已定（两分支通用）**
 
 - `besieged = ∃ 敌方单位与城市格相邻`（衍生量，不入状态）
-- 被围期间：该城收入 0、守军不可治疗、城市防御加成（+1）失效、`train` 不可用
+- 被围期间：该城收入 0、守军不可治疗、城市防御加成（+1）失效；**`train` 照常可用**（2026-10-07 拍板：围城允许防守方招兵 —— 守城反击的出口；城上格 T2 照旧 → 每次一兵、出来才能再招）
 - 中立村庄：移动进入即占领
 - 易手后：城市保留等级，`population −1`（下限 0），原守军逐出（v1 固定逐出）
 
@@ -304,7 +304,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
   - 违反 → 拒绝：`move: 敌城未破或需从相邻格进入（§4.4）`
   - **killSwap 同受此门约束**：击杀城上守军后补位 = 从相邻进入，`hasWall = true` → **补位受阻、攻方留原地**（§4.1-5「目标格可进入」的敌城语义）；**门通过即占领** —— 补位进入墙已破敌城与 move 同一 §4.4 占领落地（「进入即占领」按进入语义统一，不区分进入方式；2026-10-06 裁决）
 - **占领落地效果**（move 进入即占领，`village=false` 语义之外的城市版）：`owner = 占领方`、`level` 保留、`population = max(0, population − 1)`、`isCapital` 不变、`workshop` 保留、**`hasWall = false, wallDurability = 0`**（墙随城破，可通过 upgrade-wall 重筑）、原守军逐出（若占领路径上城格有兵则该路径本就非法，逐出规则留给未来路径）、占领方 `noCityTurns = 0`（§4.7 占城瞬间清零）、**占领者入籍：`homeCity = 被占城`（城籍 = 出生城 + 攻占事件，仅攻占换籍 —— 路经/走回自己城不改；2026-10-07 拍板）**
-- **胜利**：占领后立即走 §3.2 胜利检查 —— 持有全部首都 → 征服胜利（T4 宽限不豁免该判定）
+- **胜利**：占领后立即走 §3.2 胜利检查 —— 条件按 §4.7：占下敌最后一城时**对方仍有兵残留 → 入 T4 宽限、不即时胜**（「外面有兵可以限时占任何城池」的宽限规矩优先，2026-10-07 拍板）；对方无兵 → 即时胜
 
 ### 4.5 视野与迷雾（展开，design §2.5）
 
@@ -371,9 +371,9 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 
 ### 4.7 胜利判定（展开，design §4.5）
 
-| 模式 | 判定（检查点 = 每次城市归属/数量变化后） |
+| 模式 | 判定（检查点 = 每次动作后 —— 城市归属与单位增减都可能达成，§3.2） |
 | --- | --- |
-| **征服** | 某玩家拥有**全场全部首都**（开局全部 `isCapital` 城的集合）→ 立即胜利。**前置：开局首都集合 ≥ 2**（2026-10-06 修真空真值 —— 单首都配置下持有者恒"拥有全部"，无对抗语义、不应触发；无首都/单首都配置 = 无征服） |
+| **征服** | **全部对手淘汰**（T4 宽限耗尽 → `eliminated`）→ 胜；或对手**既无城也无兵**（无翻盘可能）→ 立即胜。**攻占首都 ≠ 即时胜利**（2026-10-07 用户拍板：残兵「外面有兵可以限时占任何城池」的宽限规矩优先 —— 占首都只是把对方推入 5 回合宽限）。**单人配置（< 2 玩家）无胜利判定**（沙盒）。旧「持有全部首都即胜」与 ≥2 首都守卫一并废止 |
 | **积分** | 第 30 回合结束时分数最高者胜；分数公式 🔶-T5 |
 | **沙盒** | 无胜利条件 |
 
@@ -406,7 +406,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 ### 经济
 
 - [ ] 升级：人口**恰好等于**需求可升；差 1 拒绝；`wall` 已有拒绝；消耗后余量保留
-- [ ] `train`：容量满拒绝（容量 = `level + 1` 上下界 → `turn/train-capacity-l1-slot` / `turn/train-capacity-rejected`）、**容量只数本方籍员 → ✅ `turn/capacity-owner-filter`**、城上格被占拒绝（T2）、被围城拒绝
+- [ ] `train`：容量满拒绝（容量 = `level + 1` 上下界 → `turn/train-capacity-l1-slot` / `turn/train-capacity-rejected`）、**容量只数本方籍员 → ✅ `turn/capacity-owner-filter`**、城上格被占拒绝（T2）、**被围城可训练 → ✅ `turn/train-under-siege`**
 - [ ] 被围城**同时**失去收入 / 治疗 / 城市防御加成（一条断言三件事）
 - [ ] 科技成本整数无小数（`tier × cities + 4`）；重复研究拒绝
 - [ ] 一次性收入占比的统计口径（供 `sim` 使用）
@@ -421,7 +421,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - [ ] 占领落地：owner 易主、level 保留、pop−1 下限 0、墙清除、`noCityTurns` 清零 → `turn/capture-move-in`
 - [ ] 城籍规矩：攻占入籍（`capture-move-in` / `capture-conquest` 含断言）、路经/走回自己城不改 → ✅ `turn/enter-own-city-no-rebind`
 - [ ] killSwap 撞门：城上守军被杀但墙未破 → 补位受阻留原地 → `turn/killswap-blocked-by-wall`
-- [ ] 征服触发：占领最后一座敌首都 → `winner`（T4 不豁免）→ `turn/capture-conquest`
+- [ ] 征服判定（§4.7 重定义）：0 城 0 兵即时胜 → `turn/capture-conquest`（对方无兵 ✓）；**占首都 ≠ 即时胜（残兵入宽限）→ ✅ `turn/conquest-waits-remnant`**
 - [ ] 城防 +2 条件（被围城防失效 + 墙在/不在成对）→ ✅ `turn/wall-city-def-bonus`（def40→3）+ ✅ `turn/city-def-no-wall`（def20→5）
 
 ### 枚举与 bot（§8，✅ = 向量已落地）

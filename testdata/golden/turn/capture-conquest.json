@@ -183,5 +183,5 @@
     ],
     "winner": "A"
   },
-  "notes": "征服触发：A 占领 B 唯一首都（c2 isCapital 保留、入籍 city.000002（仅攻占换籍））→ A 持有全部首都 → **winner=A，动作后立即判定**（§3.2）；pop 1→0；B 0 城但未走 endTurn → noCityTurns 不计、eliminated=false（T4 宽限未启动也不豁免征服判定 —— 两字段均钉在 false/0）"
+  "notes": "征服（§4.7 重定义 2026-10-07）：A 占领 B 唯一首都 → **B 既无城也无兵（0 城 0 兵 = 无翻盘可能）→ 立即胜 winner=A**（判据是 0 城 0 兵，不是首都 —— 对方有兵时见 conquest-waits-remnant 入宽限不即时胜）；pop 1→0、入籍 city.000002；B eliminated=false（未走 endTurn）"
 }

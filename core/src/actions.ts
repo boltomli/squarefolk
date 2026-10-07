@@ -416,12 +416,29 @@ function settleImprovementYields(state: State, ctx: ActionContext): void {
  * - 淘汰标记不再在此同步（§1 行 45 已改单向 eliminated ⇒ 无城市）：无城先进 §4.7 宽限
  *   （noCityTurns 计数在 endTurn commit-2），达阈值才在提交阶段置 eliminated。
  */
+/**
+ * §4.7 征服（2026-10-07 重定义，用户拍板）：胜利 = **全部对手淘汰**（T4 宽限耗尽）→ 胜，
+ * 或对手**既无城也无兵**（无翻盘可能）→ 立即胜。**攻占首都 ≠ 即时胜利** —— 残兵「外面有兵
+ * 可以限时占任何城池」的宽限规矩优先（占首都只是把对方推入 5 回合宽限）。
+ * 单人配置（< 2 玩家，沙盒）无胜利判定。检查点 = 每次动作后（§3.2）。旧「全首都归一即胜」废止。
+ */
 function checkVictory(state: State): number | null {
-  const capitals = state.cities.filter((city) => city.isCapital);
-  // §4.7：征服前置 = 开局首都集合 ≥ 2（单首都配置无对抗语义，真空真值不触发；2026-10-06）
-  if (capitals.length < 2) return null;
-  const owner = capitals[0].owner;
-  return capitals.every((city) => city.owner === owner) ? owner : null;
+  if (state.players.length < 2) return null;
+  for (let idx = 0; idx < state.players.length; idx += 1) {
+    let wins = true;
+    for (let other = 0; other < state.players.length; other += 1) {
+      if (other === idx) continue;
+      const opponent = state.players[other];
+      const opponentHasCities = state.cities.some((city) => city.owner === other);
+      const opponentHasUnits = state.units.some((unit) => unit.owner === other);
+      if (!opponent.eliminated && (opponentHasCities || opponentHasUnits)) {
+        wins = false;
+        break;
+      }
+    }
+    if (wins) return idx;
+  }
+  return null;
 }
 
 /** actionLog.payload = §2 载荷字段（去掉动作判别键 type） */
@@ -606,7 +623,7 @@ export function applyAction(
       const city = findCity(next, cityId);
       if (city === undefined) return reject(`train: 城市 ${cityId} 不存在`);
       if (city.owner !== actor) return reject('train: 城市非本方（§2 公共前置）');
-      if (isBesieged(next, city)) return reject('train: 被围城不可训练（§2 / §4.4）');
+      // 被围城可训练（2026-10-07 拍板，撤「未被围」谓词）：守城招兵 —— 围城只封收入/治疗/城防加成（§4.4）
       // §4.3（2026-10-07 修正「就差1」）：容量 = level + 1 —— 初始兵占 1 坑、每城常留 1 个训练坑；
       // 按 homeCity 计数、与位置无关（移出城仍占坑，§4.2.3 反滚雪球本意）；
       // 只数 owner = 城属的籍员（修：敌方残兵对被占城的绑定不占本方坑 —— 过滤在计数、不清数据）

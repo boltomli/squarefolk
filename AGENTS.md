@@ -16,6 +16,7 @@
 > **Phase 12.2 容量「就差1」修正（用户拍板，design v0.21）**：单位容量 `level` → **`level + 1`**（§2 train 行 + §4.3 + actions.ts capacity 检查与措辞；计数仍按 homeCity 与位置无关 —— 移出城仍占坑）；起始编成回 **1 步兵/城**（homeCity=该城占坑、城外落位不挡 T2，撤 df35b60 的 homeCity=null 权宜计）；产出归属维持「格子归谁人口归谁」（用户明确按格子）。向量：新增 `turn/train-capacity-l1-slot`（驻1可训，对旧公式红）+ `train-capacity-rejected` 改驻2钉上界 → turn 29/29、总 **140** 断言全绿；浏览器实测：驻留1开局可训、训后驻留2/2、⭐10→6。**)
 > **Phase 12.3 城籍规矩 + 容量归属过滤（用户拍板「仅攻占换籍」，design v0.22）**：城籍 = 出生城 + 攻占事件（captureEnemyCity 内 `unit.homeCity = city.id`；路经/走回自己城不改 → `turn/enter-own-city-no-rebind`）；容量计数补 `unit.owner === city.owner` 过滤（修敌方残兵占坑 bug，过滤在计数不清数据 → `turn/capacity-owner-filter`）；capture-move-in/conquest 补入籍断言 + killSwap 单测补断言。turn 31/31、总 **142** 断言全绿。**)
 > **Phase 12.4 攻方反击致死补 4c（用户报 hp=0 尸体占格 bug，design v0.23）**：§4.1-D 新增步骤 4c（counter 落地后攻方 hp=0 → 移除、跳过补位/晋升/acted；反击击杀无补位；同归于尽两尸俱移）+ §4.1-F/§5 错误表述改正；actions.ts attack 结算重排（守方先移、攻方 4c 判定、顺带清掉过期歧义注释）；新向量 attacker-dies-counter / attacker-dies-mutual（先红后绿）→ turn 33/33、总 **144** 断言全绿。**)
+> **Phase 12.5 三拍板（design v0.24）**：① 结算后开全图（demo refreshView settled=全图 explored+视野强制 visible+敌兵直读 state；结算前迷雾照旧）② §4.7 征服重定义 = 全对手淘汰 **或** 对手 0 城 0 兵（**攻占首都 ≠ 即时胜**，残兵 T4 宽限优先；旧全首都判据与 ≥2 守卫废止；单人 <2 玩家无胜利；checkVictory 改写）③ 围城可招兵（train 撤 isBesieged；收入/治疗/城防仍被封）。新向量 conquest-waits-remnant + train-under-siege（先红后绿）、capture-conquest/basic-ordered notes 校准、demo 胜负文案改写。turn 35/35、总 **146** 断言全绿 + repack 75,910B。**)
 
 ## 必读顺序
 

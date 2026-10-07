@@ -1,0 +1,42 @@
+{
+  "id": "turn/conquest-waits-remnant",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.7 征服重定义（2026-10-07 用户拍板：攻占首都 ≠ 即时胜 —— 残兵「外面有兵可以限时占任何城池」的宽限规矩优先）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 2, "y": 2, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 1, "y": 1, "owner": "B", "level": 1, "population": 1, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "move", "unitId": "unit.000001", "x": 1, "y": 1 }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": true, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 2, "y": 2, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 1, "y": 1, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 }
+    ],
+    "winner": null
+  },
+  "notes": "占首都 ≠ 即时胜：A 占下 B 唯一首都（A 持有全部首都、B 0 城）→ **但 B 还有外线兵 unit.000002 → B 入 T4 宽限（外面有兵可限时占任何城池）→ winner null**（旧实现「全首都归一 → 即时胜」→ 本向量红）；占领落地全效果照旧（pop 1→0、入籍 city.000002、moved=true）；B 的 noCityTurns 要等 B 自己回合结束才 +1 → 本动作后仍 0、eliminated=false；宽限耗尽后的胜 → 由 §3.1-5 淘汰路径 + §4.7 判定（单测覆盖）"
+}

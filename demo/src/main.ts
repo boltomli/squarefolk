@@ -155,8 +155,13 @@ function accumulateVisibleFor(viewer: number): void {
 
 function refreshView(): void {
   accumulateVisibleFor(PLAYER_IDX);
+  // 结算后开全图（2026-10-07 拍板）：胜负面板弹出 / 沙盒完成后迷雾失效 —— 全图地形单位尽收
+  const settled = session.winner !== null || session.celebrated;
+  const explored = settled
+    ? Array.from({ length: MAP_H }, (_, y) => Array.from({ length: MAP_W }, (_, x): number[] => [y, x]))
+    : exploredPairs(session.explored);
   session.view = viewFor(PLAYER_IDX, session.state, {
-    explored: exploredPairs(session.explored),
+    explored,
     mountainTerrainId: MOUNTAIN_TERRAIN_ID,
   });
 }
@@ -312,7 +317,7 @@ function submitAs(actor: number, action: Action): State | null {
   if (result.winner !== null && session.winner === null) {
     session.winner = result.winner;
     session.status =
-      result.winner === PLAYER_IDX ? '🏆 征服胜利：你已占领全部首都' : '💀 被征服：Bot 占领了你的全部首都';
+      result.winner === PLAYER_IDX ? '🏆 胜利：对手已无城无兵（或已被淘汰）' : '💀 战败：你已无城无兵（或已被淘汰）';
   }
   refreshView();
   syncCityStyles(true);
@@ -506,7 +511,7 @@ function botStep(): void {
   if (result.winner !== null && session.winner === null) {
     session.winner = result.winner;
     session.status =
-      result.winner === PLAYER_IDX ? '🏆 征服胜利：你已占领全部首都' : '💀 被征服：Bot 占领了你的全部首都';
+      result.winner === PLAYER_IDX ? '🏆 胜利：对手已无城无兵（或已被淘汰）' : '💀 战败：你已无城无兵（或已被淘汰）';
   }
   accumulateVisibleFor(BOT_IDX);
   if (session.winner !== null) {
@@ -541,7 +546,7 @@ function endBotTurn(reason: string): void {
     if (result.winner !== null && session.winner === null) {
       session.winner = result.winner;
       session.status =
-        result.winner === PLAYER_IDX ? '🏆 征服胜利：你已占领全部首都' : '💀 被征服：Bot 占领了你的全部首都';
+        result.winner === PLAYER_IDX ? '🏆 胜利：对手已无城无兵（或已被淘汰）' : '💀 战败：你已无城无兵（或已被淘汰）';
     } else {
       session.status = `⚠ ${reason} —— 已强制结束 bot 回合`;
     }
@@ -680,10 +685,18 @@ function buildModel(): ViewModel {
     const x = index % MAP_W;
     const y = Math.floor(index / MAP_W);
     const tile = state.tiles[y][x];
-    // 己方单位全局已知；敌方单位仅 viewFor 的 enemyUnits（visible 格）→ 不泄漏雾下信息
+    // 己方单位全局已知；敌方单位仅 viewFor 的 enemyUnits（visible 格）→ 不泄漏雾下信息；
+    // 结算后（winner / 沙盒完成）迷雾失效：敌兵直接读 state、视野强制 visible（2026-10-07 开全图）
+    const settled = session.winner !== null || session.celebrated;
     const ownUnit = state.units.find((other) => other.x === x && other.y === y && other.owner === PLAYER_IDX);
     const viewEnemy = ownUnit === undefined ? viewCell.enemyUnits?.[0] : undefined;
-    const enemyUnit = viewEnemy === undefined ? undefined : state.units.find((other) => other.id === viewEnemy.id);
+    const enemyUnit = ownUnit !== undefined
+      ? undefined
+      : settled
+        ? state.units.find((other) => other.x === x && other.y === y)
+        : viewEnemy === undefined
+          ? undefined
+          : state.units.find((other) => other.id === viewEnemy.id);
     const unit = ownUnit ?? enemyUnit;
     const cityId = viewCell.building?.cityId ?? null;
     const city = cityId === null ? undefined : state.cities.find((entry) => entry.id === cityId);
@@ -695,7 +708,7 @@ function buildModel(): ViewModel {
     return {
       x,
       y,
-      visibility: viewCell.visibility,
+      visibility: settled ? 'visible' : viewCell.visibility,
       terrain: viewCell.terrain,
       resource: viewCell.resource ?? null,
       village: tile.village && viewCell.visibility !== 'hidden',
@@ -833,8 +846,8 @@ function overlayModel(): ViewModel['overlay'] {
   if (session.winner !== null) {
     const win = session.winner === PLAYER_IDX;
     return win
-      ? { title: '🏆 征服胜利！', body: `你已占领全部首都 · 用时 ${turn} 回合`, button: '查看棋盘' }
-      : { title: '💀 战败', body: `Bot 占领了你的全部首都 · 用时 ${turn} 回合`, button: '查看棋盘' };
+      ? { title: '🏆 胜利！', body: `对手已无城无兵（或已被淘汰）· 用时 ${turn} 回合`, button: '查看棋盘' }
+      : { title: '💀 战败', body: `你已无城无兵（或已被淘汰）· 用时 ${turn} 回合`, button: '查看棋盘' };
   }
   if (session.celebrated && session.mode === 'sandbox') {
     return {
