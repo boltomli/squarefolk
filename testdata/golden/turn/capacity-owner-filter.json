@@ -1,0 +1,36 @@
+{
+  "id": "turn/capacity-owner-filter",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.3 容量只数 owner=城属 的籍员（2026-10-07 修：敌方残兵对被占城的绑定不占本方坑）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "B", "type": "unit.warrior", "x": 2, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 1, "y": 2, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 0, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "B", "type": "unit.warrior", "x": 2, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 1, "y": 2, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000003", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "players": [
+      { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 0, "techs": [], "met": [], "eliminated": false }
+    ],
+    "winner": null
+  },
+  "notes": "归属过滤：c1 已易主 A（敌方两名残兵仍绑定 homeCity=city.000001 —— 攻占后敌籍不清理）→ 容量 level+1 = 2 只数 owner=A 的籍员 = 0 < 2 → 可训（无过滤则 stationed=2 ≥ 2 拒 —— 本向量对旧实现红）。两敌兵距城切比雪夫 2 → 不围城（train 被围拒不触发）；城上格空 ✓；stars 5−3=2。敌兵绑定保留（homeCity 不清）—— 过滤在计数、不在数据。winner：首都 1 座 < 2 不触发"
+}

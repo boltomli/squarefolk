@@ -601,10 +601,11 @@ export function applyAction(
       if (city === undefined) return reject(`train: 城市 ${cityId} 不存在`);
       if (city.owner !== actor) return reject('train: 城市非本方（§2 公共前置）');
       if (isBesieged(next, city)) return reject('train: 被围城不可训练（§2 / §4.4）');
-      const stationed = next.units.filter((unit) => unit.homeCity === city.id).length;
       // §4.3（2026-10-07 修正「就差1」）：容量 = level + 1 —— 初始兵占 1 坑、每城常留 1 个训练坑；
-      // 按 homeCity 计数、与位置无关（移出城仍占坑，§4.2.3 反滚雪球本意）
+      // 按 homeCity 计数、与位置无关（移出城仍占坑，§4.2.3 反滚雪球本意）；
+      // 只数 owner = 城属的籍员（修：敌方残兵对被占城的绑定不占本方坑 —— 过滤在计数、不清数据）
       const capacity = city.level + 1;
+      const stationed = next.units.filter((unit) => unit.homeCity === city.id && unit.owner === city.owner).length;
       if (stationed >= capacity) {
         return reject(`train: 驻留 ${stationed} ≥ 容量 level+1 = ${capacity}（§2 / §4.2.3）`);
       }
@@ -888,6 +889,8 @@ function captureEnemyCity(state: State, unit: Unit, city: City): void {
   city.hasWall = false;
   city.wallDurability = 0;
   state.players[unit.owner].noCityTurns = 0;
+  // §4.3/§4.4 城籍 = 出生城 + 攻占事件（2026-10-07 拍板，仅攻占换籍）：占领者入籍被占城
+  unit.homeCity = city.id;
 }
 
 // ── §8.1 legalActions（唯一路径：有界候选生成 → 逐条 applyAction 过滤 → §8.1 排序） ──

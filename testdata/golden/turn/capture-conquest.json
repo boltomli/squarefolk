@@ -4,37 +4,184 @@
   "source": "core-spec §4.4 胜利（持有全部首都 → 征服；T4 不豁免判定）",
   "given": {
     "fixture": "actionApply",
-    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
     "units": [
-      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
     ],
     "cities": [
-      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
-      { "id": "city.000002", "x": 1, "y": 1, "owner": "B", "level": 1, "population": 1, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 1,
+        "population": 1,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
     ],
     "players": [
-      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
-      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
     ],
-    "unitTypes": { "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "siegeDamage": 1 } },
-    "techs": {}, "resources": {},
-    "currentPlayer": "A", "turn": 0, "phase": "act",
-    "action": { "type": "move", "unitId": "unit.000001", "x": 1, "y": 1 }
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "move",
+      "unitId": "unit.000001",
+      "x": 1,
+      "y": 1
+    }
   },
   "expect": {
     "rejected": false,
     "cities": [
-      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
-      { "id": "city.000002", "x": 1, "y": 1, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      },
+      {
+        "id": "city.000002",
+        "x": 1,
+        "y": 1,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
     ],
     "players": [
-      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
-      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
     ],
     "units": [
-      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": true, "attacked": false, "healed": false }
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 1,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000002",
+        "kills": 0,
+        "promoted": false,
+        "moved": true,
+        "attacked": false,
+        "healed": false
+      }
     ],
     "winner": "A"
   },
-  "notes": "征服触发：A 占领 B 唯一首都（c2 isCapital 保留）→ A 持有全部首都 → **winner=A，动作后立即判定**（§3.2）；pop 1→0；B 0 城但未走 endTurn → noCityTurns 不计、eliminated=false（T4 宽限未启动也不豁免征服判定 —— 两字段均钉在 false/0）"
+  "notes": "征服触发：A 占领 B 唯一首都（c2 isCapital 保留、入籍 city.000002（仅攻占换籍））→ A 持有全部首都 → **winner=A，动作后立即判定**（§3.2）；pop 1→0；B 0 城但未走 endTurn → noCityTurns 不计、eliminated=false（T4 宽限未启动也不豁免征服判定 —— 两字段均钉在 false/0）"
 }

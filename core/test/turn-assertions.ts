@@ -947,6 +947,9 @@ for (const [label, ctx] of [
       if (!captured.hasWorkshop) mismatches.push('workshop 应保留');
       if (captured.isCapital) mismatches.push('isCapital 不变（应保持 false）');
     }
+    if (attacker !== undefined && attacker.homeCity !== 'city.000002') {
+      mismatches.push(`攻占入籍: expected homeCity=city.000002（城籍=出生城+攻占事件）, got ${String(attacker.homeCity)}`);
+    }
     if (winner !== null && winner !== undefined) {
       mismatches.push(`winner: expected null（B 仍持首都 c3）, got ${winner} —— 占领非首都城不应触发征服`);
     }

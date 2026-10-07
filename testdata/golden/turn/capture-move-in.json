@@ -4,37 +4,186 @@
   "source": "core-spec §4.4 占领门 + 占领落地效果 + §4.7 占城清零",
   "given": {
     "fixture": "actionApply",
-    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "improved": [], "explored": [] },
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "improved": [],
+      "explored": []
+    },
     "units": [
-      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 0,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": null,
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
     ],
     "cities": [
-      { "id": "city.000001", "x": 1, "y": 1, "owner": "B", "level": 2, "population": 3, "hasWorkshop": true, "hasWall": false, "wallDurability": 0, "isCapital": false },
-      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+      {
+        "id": "city.000001",
+        "x": 1,
+        "y": 1,
+        "owner": "B",
+        "level": 2,
+        "population": 3,
+        "hasWorkshop": true,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": false
+      },
+      {
+        "id": "city.000002",
+        "x": 2,
+        "y": 2,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
     ],
     "players": [
-      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 4 },
-      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false,
+        "noCityTurns": 4
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
     ],
-    "unitTypes": { "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "siegeDamage": 1 } },
-    "techs": {}, "resources": {},
-    "currentPlayer": "A", "turn": 0, "phase": "act",
-    "action": { "type": "move", "unitId": "unit.000001", "x": 1, "y": 1 }
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 5,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "siegeDamage": 1
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "move",
+      "unitId": "unit.000001",
+      "x": 1,
+      "y": 1
+    }
   },
   "expect": {
     "rejected": false,
     "cities": [
-      { "id": "city.000001", "x": 1, "y": 1, "owner": "A", "level": 2, "population": 2, "hasWorkshop": true, "hasWall": false, "wallDurability": 0, "isCapital": false },
-      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+      {
+        "id": "city.000001",
+        "x": 1,
+        "y": 1,
+        "owner": "A",
+        "level": 2,
+        "population": 2,
+        "hasWorkshop": true,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": false
+      },
+      {
+        "id": "city.000002",
+        "x": 2,
+        "y": 2,
+        "owner": "B",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
     ],
     "players": [
-      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false, "noCityTurns": 0 },
-      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false,
+        "noCityTurns": 0
+      },
+      {
+        "id": "B",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
     ],
     "units": [
-      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": null, "kills": 0, "promoted": false, "moved": true, "attacked": false, "healed": false }
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 1,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 2,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": true,
+        "attacked": false,
+        "healed": false
+      }
     ],
     "winner": null
   },
-  "notes": "占领落地全效果：A 无城残兵（noCityTurns=4）从相邻 (0,1) 进入无墙敌城 c2（门三条件✓）→ owner B→A、level 2 保留、pop 3→2（易手 −1 下限 0）、workshop 保留、isCapital 不变、moved=true、**A.noCityTurns 4→0（占城瞬间清零）**；B 仍有首都 c3 → 无征服 winner=null；B 不经 endTurn → 不计 T4"
+  "notes": "占领落地全效果：A 无城残兵（noCityTurns=4）从相邻 (0,1) 进入无墙敌城 c2（门三条件✓）→ owner B→A、level 2 保留、pop 3→2（易手 −1 下限 0）、workshop 保留、isCapital 不变、moved=true、**入籍被占城 homeCity null→city.000001（城籍=出生城+攻占事件）**、**A.noCityTurns 4→0（占城瞬间清零）**；B 仍有首都 c3 → 无征服 winner=null；B 不经 endTurn → 不计 T4"
 }
