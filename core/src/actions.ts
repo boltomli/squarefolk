@@ -602,8 +602,11 @@ export function applyAction(
       if (city.owner !== actor) return reject('train: 城市非本方（§2 公共前置）');
       if (isBesieged(next, city)) return reject('train: 被围城不可训练（§2 / §4.4）');
       const stationed = next.units.filter((unit) => unit.homeCity === city.id).length;
-      if (stationed >= city.level) {
-        return reject(`train: 驻留 ${stationed} ≥ 容量 level ${city.level}（§2 / §4.2.3）`);
+      // §4.3（2026-10-07 修正「就差1」）：容量 = level + 1 —— 初始兵占 1 坑、每城常留 1 个训练坑；
+      // 按 homeCity 计数、与位置无关（移出城仍占坑，§4.2.3 反滚雪球本意）
+      const capacity = city.level + 1;
+      if (stationed >= capacity) {
+        return reject(`train: 驻留 ${stationed} ≥ 容量 level+1 = ${capacity}（§2 / §4.2.3）`);
       }
       const typeDef = ctx.unitTypes[unitType];
       if (typeDef === undefined) return reject(`train: 兵种 ${unitType} 未知（§2 type 已解锁）`);

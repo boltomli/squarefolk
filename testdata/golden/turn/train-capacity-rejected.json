@@ -1,20 +1,120 @@
 {
   "id": "turn/train-capacity-rejected",
   "rulesVersion": "0.1.0",
-  "source": "core-spec §2 train（容量 = 城市等级）/ §4.2.3 人口上限 = 城市容量",
+  "source": "core-spec §2 train 容量 = level+1 / §4.3 单位容量（2026-10-07 修正后钉上界）",
   "given": {
     "fixture": "actionApply",
-    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "map": {
+      "h": 3,
+      "w": 3,
+      "terrain": [
+        "...",
+        "...",
+        "..."
+      ],
+      "roads": [],
+      "villages": [],
+      "resources": [],
+      "explored": []
+    },
     "units": [
-      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+      {
+        "id": "unit.000001",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 1,
+        "y": 1,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      },
+      {
+        "id": "unit.000002",
+        "owner": "A",
+        "type": "unit.warrior",
+        "x": 1,
+        "y": 0,
+        "hp": 10,
+        "maxHp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ],
+        "homeCity": "city.000001",
+        "kills": 0,
+        "promoted": false,
+        "moved": false,
+        "attacked": false,
+        "healed": false
+      }
     ],
-    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
-    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
-    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
-    "techs": {}, "resources": {},
-    "currentPlayer": "A", "turn": 0, "phase": "act",
-    "action": { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" }
+    "cities": [
+      {
+        "id": "city.000001",
+        "x": 0,
+        "y": 0,
+        "owner": "A",
+        "level": 1,
+        "population": 0,
+        "hasWorkshop": false,
+        "hasWall": false,
+        "wallDurability": 0,
+        "isCapital": true
+      }
+    ],
+    "players": [
+      {
+        "id": "A",
+        "stars": 5,
+        "techs": [],
+        "met": [],
+        "eliminated": false
+      }
+    ],
+    "unitTypes": {
+      "unit.warrior": {
+        "cost": 3,
+        "hp": 10,
+        "atk10": 20,
+        "def10": 20,
+        "move": 1,
+        "range": 1,
+        "counter": [
+          1,
+          1
+        ]
+      }
+    },
+    "techs": {},
+    "resources": {},
+    "currentPlayer": "A",
+    "turn": 0,
+    "phase": "act",
+    "action": {
+      "type": "train",
+      "cityId": "city.000001",
+      "unitType": "unit.warrior"
+    }
   },
-  "expect": { "rejected": true },
-  "notes": "容量满拒绝：城 L1 容量 1，homeCity=c1 的驻留数已 1 → 1 < 1 为假 → 拒绝，状态零变化（expect 仅 rejected，其余不校验）。载荷键 2026-10-05 由 type 改名 unitType（与判别键避撞）"
+  "expect": {
+    "rejected": true
+  },
+  "notes": "容量满拒绝（新公式上界）：城 L1 容量 = level+1 = 2，homeCity=c1 驻留 2（两名初始兵均在城外、城上格空 —— 拒绝纯由容量触发）→ 2 ≥ 2 拒绝，状态零变化（expect 仅 rejected）。与 train-capacity-l1-slot（驻 1 可训）成对钉 level+1 上下界。载荷键 2026-10-05 由 type 改名 unitType"
 }

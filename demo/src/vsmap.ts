@@ -7,9 +7,9 @@
  * - 地图尺寸沿用 demo 的 MAP_W/MAP_H（沙盒与对战同为 10×10 → 壳层索引算术共用）
  * - spawns[0] → 玩家 0（人类，PLAYER_IDX 先手）、spawns[1] → 玩家 1（bot 后手）；
  *   两城均 isCapital（§4.7 征服检查 = 全部首都同一 owner）
- * - 起始兵力（2026-10-07 手感修订）：每城 **1 工兵 + 1 斥候**，落城外相邻可通行格、homeCity = null
- *   （城格留空 → 不违反 train「城上格为空」；驻留 0 < 容量 → 开局即可训练。旧版 1 步兵站城格
- *   + homeCity=该城 = 训练被永久锁死，是"兵太少"的主因之一）
+ * - 起始兵力（2026-10-07 二次修订，用户拍板）：每城 **1 步兵**，homeCity = 该城（初始兵占原始城的坑，
+ *   与位置无关）、落城外相邻可通行格（城格留空不挡 T2）。容量 = 城级 + 1 = 2 → 占 1 坑留 1 训练坑，
+ *   开局即可再训。（首版站城格 + 容量 level = 1 → 训练锁死，即"差1"那个 bug）
  * - 双方 START_STARS ★ 与 START_TECHS（与沙盒同一引导科技，config.ts 唯一事实源）
  * - 村庄 / 资源按生成结果落格（resources 三元组 = [y, x, kind]，§6 坐标序）
  * - state.seed = 世界种子、state.rng = 生成末态 rngFinal（§4.6 坑⑨：生成后冻结）
@@ -95,16 +95,16 @@ export function createVsInitialState(seed: number): VsSetupResult {
     };
   });
 
-  // 起始兵力（2026-10-07 手感修订）：每城 1 工兵 + 1 斥候，落**城外相邻可通行格**、homeCity = null。
-  // 修复：旧版 1 步兵站城格 + homeCity=该城 → 违反 train「城上格为空」(T2) 且驻留 1 ≥ 容量
-  // level(1) → 开局训练被永久锁死（"兵太少"主因之一）；城格留空 + homeCity null → 开局即可训练。
-  // 邻格候选：8 向按 (dy,dx) 字典序（确定性）取前 2 个在界内、非水、无兵、非城的格；
-  // 每城不足 2 格 → 返回失败（minReach 连通块 ≥12 使此路径实际不可达，硬失败优于静默降级）。
+  // 起始兵力（2026-10-07 二次修订，用户拍板「回 1 兵/城 + 容量 = 城级 + 1」）：每城 1 步兵，
+  // homeCity = 该城（**初始兵占原始城的坑**，与位置无关）、落**城外相邻可通行格**（城格留空 →
+  // 不挡 T2「城上格为空」）。容量 level+1 = 2 → 占 1 坑、留 1 训练坑 → 开局即可再训 1 个。
+  // 邻格候选：8 向按 (dy,dx) 字典序（确定性）取首个在界内、非水、无兵、无城的格；
+  // 无候选 → 返回失败（minReach 连通块 ≥12 使此路径实际不可达，硬失败优于静默降级）。
   const unitTypesContent = CONTENT.unitTypes;
   const spotsUsed = new Set<string>();
   const units: Unit[] = [];
   let unitSeq = 0;
-  const starterTypes: readonly string[] = ['unit.builder', 'unit.scout'];
+  const starterTypes: readonly string[] = ['unit.warrior'];
   for (const [cityIndex, city] of cities.entries()) {
     const spots: { x: number; y: number }[] = [];
     for (const dy of [-1, 0, 1]) {
@@ -121,7 +121,7 @@ export function createVsInitialState(seed: number): VsSetupResult {
       }
     }
     if (spots.length < starterTypes.length) {
-      return { ok: false, reason: `城 city.00000${cityIndex + 1} 相邻可通行格 ${spots.length} < ${starterTypes.length}（起始 1 工兵 + 1 斥候落位）—— 换个种子重试` };
+      return { ok: false, reason: `城 city.00000${cityIndex + 1} 相邻可通行格 ${spots.length} < ${starterTypes.length}（起始兵落位）—— 换个种子重试` };
     }
     for (const [slot, type] of starterTypes.entries()) {
       const def = unitTypesContent[type];
@@ -141,7 +141,7 @@ export function createVsInitialState(seed: number): VsSetupResult {
         healed: false,
         kills: 0,
         promoted: false,
-        homeCity: null,
+        homeCity: city.id,
       });
     }
   }

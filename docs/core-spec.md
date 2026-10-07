@@ -58,7 +58,7 @@ UI 高亮、bot、联机校验**共用同一份判定**。公共前置（每个�
 | --- | --- | --- |
 | `move` | `unitId, x, y` | `!moved && (!attacked || unit.canMoveAfterAttack) && !healed`（技能字段默认 false = 现行"攻击即结束回合"，design v0.14）；目标可达（§4.2 算法）；目标无单位；目标非 `hidden`（可进 `explored` 暗区）；**目标为敌方城格时另需满足 §4.4 占领门**（`wallDurability ≤ 0` 且起点与该城相邻）→ 落地后 `moved = true`（占领门违反 → `move: 敌城未破或需从相邻格进入（§4.4）`） |
 | `attack` | `unitId, targetId(unitId \| cityId)` | `!attacked && !healed`；**架设型需 `!moved`**（`canAttackAfterMove \|\| !moved`，§4.1-G T6）；目标为敌方且**可见**；切比雪夫距离 ≤ `range` → 结算后 `attacked = true`（本回合结束，§4.1-E）。**`targetId = cityId` 分支 = §4.4 主动攻城**（城格须空、削 `wallDurability`、非战斗结算；谓词与拒绝理由见 §4.4） |
-| `train` | `cityId, unitType`（载荷键 **`unitType`** —— 与 §6 判别键 `type` 避撞，2026-10-05 修正） | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level`（容量）；`unitType` 已解锁；`stars ≥ cost(unitType)`；城上格为空（T2） |
+| `train` | `cityId, unitType`（载荷键 **`unitType`** —— 与 §6 判别键 `type` 避撞，2026-10-05 修正） | 城属本方且**未被围**；该城 `homeCity` 驻留数 < `level + 1`（**容量 = 城级 + 1** —— 初始兵占 1 坑、每城常留 1 个训练坑；2026-10-07 修正「就差1」）；`unitType` 已解锁；`stars ≥ cost(unitType)`；城上格为空（T2） |
 | `harvest` | `unitId` | 单位所在格有 `resource` 且在**己方领土**（§4.3 领地）；科技已解锁 → 资源移除，按 data 给人口或星星 |
 | `build` | `unitId, kind` | 目标格在**己方领土**（§4.3 领地；**道路例外**：中立地可修、敌方领土不可）、无既有 `improved`、地形符合 `kind.allowedOn`（data）、`stars ≥ cost`、科技已解锁 |
 | `research` | `techId` | 未研究、前置已满足、`stars ≥ cost`（§4.3 公式） |
@@ -238,7 +238,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 - 升到 `level+1` 需 `population ≥ level+1`（当级需求 = 目标级数），升级**消耗**等额人口，剩余保留
 - 三选一：`workshop` → `hasWorkshop=true`（+1/回合）；`stars5` → `stars += 5`；`wall` → `hasWall=true, wallDurability=3`（需 `!hasWall`）
 
-**单位容量**：每城容量 = `level`，按 `unit.homeCity` 计数，`train` 受其约束（design §4.2.3"人口上限 = 城市容量"）。
+**单位容量**：每城容量 = `level + 1`（2026-10-07 修正「就差1」—— 初始兵占 1 坑、每城常留 1 个训练坑 → 开局可训；升城扩坑的反滚雪球本意不变，design §4.2.3"人口上限 = 城市容量"），按 `unit.homeCity` 计数（**与位置无关：移出城仍占坑**），`train` 受其约束。
 
 **采集与建筑**
 
@@ -405,7 +405,7 @@ round_half_up(n, d) = floor( (2n + d) / (2d) )        # 正数等价于 x + 0.5 
 ### 经济
 
 - [ ] 升级：人口**恰好等于**需求可升；差 1 拒绝；`wall` 已有拒绝；消耗后余量保留
-- [ ] `train`：容量满拒绝、城上格被占拒绝（T2）、被围城拒绝
+- [ ] `train`：容量满拒绝（容量 = `level + 1` 上下界 → `turn/train-capacity-l1-slot` / `turn/train-capacity-rejected`）、城上格被占拒绝（T2）、被围城拒绝
 - [ ] 被围城**同时**失去收入 / 治疗 / 城市防御加成（一条断言三件事）
 - [ ] 科技成本整数无小数（`tier × cities + 4`）；重复研究拒绝
 - [ ] 一次性收入占比的统计口径（供 `sim` 使用）

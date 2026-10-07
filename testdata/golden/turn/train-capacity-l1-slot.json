@@ -1,0 +1,27 @@
+{
+  "id": "turn/train-capacity-l1-slot",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §2 train 容量 = level+1 / §4.3 单位容量（2026-10-07 修正「就差1」：初始兵占 1 坑、L1 另留 1 训练坑 → 开局可训）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [ { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true } ],
+    "players": [ { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false } ],
+    "unitTypes": { "unit.warrior": { "cost": 3, "hp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "train", "cityId": "city.000001", "unitType": "unit.warrior" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "A", "type": "unit.warrior", "x": 0, "y": 0, "hp": 10, "maxHp": 10, "atk10": 20, "def10": 20, "move": 1, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "players": [ { "id": "A", "stars": 2, "techs": [], "met": [], "eliminated": false } ]
+  },
+  "notes": "容量 = level + 1（2026-10-07「就差1」修正）钉下界：L1 城容量 2、初始兵（homeCity=c1，站城外 (1,1)）已占 1 → 1 < 2 ✓ 可训（旧公式 level=1 → 1 ≥ 1 拒 —— 本向量对旧实现红）；城上格空 ✓、stars 5 ≥ 3 ✓ → 新兵出生城格 (0,0)、homeCity=c1、stars 5−3=2。与 train-capacity-rejected（驻 2 拒）成对钉上下界"
+}
