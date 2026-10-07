@@ -712,6 +712,37 @@ CI：headless 单测 + 配置校验 + 平衡回归（§6.1 `sim`）→ Godot 导
 
 **制作清单**：版本号规范（`x.y.z`，TapTap 要求递增且唯一）、更新日志、包名唯一且不含渠道标识、隐私政策文本、素材授权凭证 `assets/LICENSES.md`（§7.4）、正式/试玩状态与资质对应关系复核。
 
+### 5.9.1 跨平台可执行文件（桌面期规划，v0.25 起）
+
+> 目标：在 D4 正式定案前，先让「编辑器」与「游戏 demo」都有**三平台（macOS / Windows / Linux）可执行文件**。硬约束：**不预判 D4**（正式游戏壳仍按 §5.9 目标流水线走 Godot + TapTap 首发；本节的 Tauri 游戏壳只是 demo 期评审载体）。
+
+**轨 A · 编辑器（确定性，立即可做）**——Tauri 2 bundler 原生产出：
+
+| 平台 | 产物 | 签名策略（分阶段） |
+| --- | --- | --- |
+| macOS | `.dmg`（arm64 起步；universal 后续） | 第一阶段不签名（用户右键打开）；远期 Apple Developer ID + notarytool 公证 |
+| Windows | `.msi` / NSIS | 第一阶段不签名（SmartScreen 提示）；itch/自分发可接受，远期按需买证书 |
+| Linux | `.AppImage` / `.deb` | 无需签名 |
+
+- 配置补齐：`tauri.conf.json` bundle 段 —— `productName`（Squarefolk Data Studio / 数据工坊）、`identifier`（如 `io.github.boltomli.squarefolk-editor`）、图标集（由 `icons/icon.png` 多尺寸生成；⚠ exFAT 卷上生成产物放 APFS，沿用 P9 的 target symlink 方案）、`category`。
+- 版本号：编辑器独立子包 `version`，跟随发布 tag `editor-vX.Y.Z`；与根 `rulesVersion` 解耦（编辑器是工具不是规则）。
+- ⚠ 已知坑复用：`src-tauri/target` 符号链接到 APFS；`capabilities/` 的 `._*.json` 会让 tauri-build 报 JSON 错（`find . -name '._*' -delete` 即愈）。
+
+**轨 B · 游戏 demo（临时壳，不预判 D4）**：
+
+- 形态 = **零逻辑 Tauri 壳**：webview 只加载 `demo/squarefolk.html` 单文件（三件套分离不破 —— 壳内没有一行规则）。复用编辑器全部 Tauri 经验（同版本线、同图标管线）。
+- 产出三平台可执行 + itch 三通道：`push.sh <owner/game> windows` / `:osx` / `:linux`（脚本 channel 参数化已支持；`html` 通道照旧传网页版 —— 可执行与网页**同源同构建**）。
+- **定位**：试玩 / 评审 / 无浏览器环境兜底；**不是** TapTap 或正式发行载体。D4 定案若选 Godot，本壳降级为"评审构建工具"或退役；若 D4 反转选 TS+Tauri，本壳直接转正（届时才谈 §5.9 的签名与商店流水线）。
+
+**轨 C · CI 骨架（两轨共用，GitHub Actions）**：
+
+1. `test`（ubuntu）：`npm test`（146 断言 + validate + selftest）—— 每 push 必跑。
+2. `editor-build`（matrix: macos / windows / ubuntu）：`tools/editor` tsc + vite + `tauri build` → artifacts 上传；打 tag `editor-v*` 时挂 GitHub Release。
+3. `demo-shell-build`（tag `demo-v*` 触发）：三平台 `tauri build` → `butler push` 三通道（`BUTLER_KEY` 走 GitHub Secrets，**永不入库**）+ HTML 通道 → GitHub Release 附安装包。
+- 红线继承：keystore / 签名材料 / API key 严禁入库（§5.9 原则）；构建产物不进 git（dist/ 仅本地快照）。
+
+**验收线**：① 三平台 `tauri build` 各出可执行且能打开编辑器/开局一局；② `butler push` 三通道 + html 通道成功；③ CI 三 job 绿。
+
 ---
 
 ## 🧩 6. 内容即数据与配置工具（mod 与扩展）
@@ -792,6 +823,8 @@ testdata/
 | `dump` | 导出玩家可读的数值总表（Markdown），供社区审阅与 mod 参考 |
 
 **M4 阶段（桌面编辑器，固定）**：编辑器**固定为桌面应用** —— 本地文件、跑 sim、大表格编辑都需要桌面能力，不做 web-only。功能含表格/表单编辑、科技树图形化、"改动即跑 `sim`"、一键导出数据包（含 `schemaVersion` + 内容 hash）、**数值 diff 与状态 diff**。框架选型见 §6.3（Tauri / Wails）；**CLI 保留为 CI 与脚本入口**，与桌面编辑器共用同一 core。
+
+**contentHash 定案（v0.25）**：`contentHash = fnv1a64_hex(join(stableStringify(parseJson(f)), sep="\\n") 按 CONTENT_PAIRS 显式序)` —— `stableStringify` = 递归按键字典序、无空白；FNV-1a 64 常数同 core-spec §0。实现在纯核心 `tools/content-hash.mjs`（编辑器「导出数据包」与未来 CLI 共用，禁散落重实现）。数据包 = zip（STORE）：五件内容文件原样 + `manifest.json`（format / rulesVersion / contentHash / 各文件 schemaVersion），文件名 `squarefolk-data-<hash前8>.zip`（内容寻址）。
 
 **分工原则**：改数值的人**不需要读规则代码、不需要打开引擎** —— 改完跑 `sim`，看 §3.7 的三条姿态验收线是否仍成立，成立才合入。D10 的标定常数回归就跑在这里。
 
