@@ -6,6 +6,7 @@
 | --- | --- |
 | `squarefolk-v0.1.0.html` | 游戏本体（`npm run demo` 产物快照，74 KB 单文件） |
 | `DESCRIPTION.md` | 页面文案（短描述 / 正文，中英双语，粘贴即用） |
+| `DEVLOG.md` | Devlog #1（英文，粘贴即用；无第三方游戏名） |
 | `screenshots/01-start.png` | 首图：起始屏（模式选择 + 种子）1280×720 |
 | `screenshots/02-vs-board.png` | 对战棋盘（迷雾 + 顶栏 + 规则面板） |
 | `screenshots/04-city-panel.png` | 城市面板（训练/升级/研究，按钮可用态） |
