@@ -3,7 +3,7 @@
   "rulesVersion": "0.1.0",
   "units": {
     "unit.warrior": {
-      "cost": 5,
+      "cost": 4,
       "hp": 10,
       "atk10": 20,
       "def10": 20,
@@ -41,6 +41,19 @@
       ],
       "tech": "tech.steel",
       "siegeDamage": 1
+    },
+    "unit.builder": {
+      "cost": 3,
+      "hp": 5,
+      "atk10": 0,
+      "def10": 5,
+      "move": 2,
+      "range": 1,
+      "counter": [
+        0,
+        1
+      ],
+      "siegeDamage": 0
     }
   }
 }

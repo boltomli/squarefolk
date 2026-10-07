@@ -13,7 +13,7 @@ import techsData from '../../data/techs.json';
 import unitsData from '../../data/units.json';
 
 /** 沙盒初始 ⭐（玩家单人一方） */
-export const START_STARS = 5;
+export const START_STARS = 10;
 
 /**
  * 沙盒初始科技（引导修缮）：果园 → 采果加人口路径首回合可见（否则果园成本 5⭐ = 全部开局星星，人口死锁）；
@@ -83,11 +83,12 @@ export const CONTENT: ActionContext = {
 };
 
 /** 展示序（红线 3：显式排序，不依赖对象/哈希迭代序） */
-export const UNIT_TYPE_ORDER: readonly string[] = ['unit.warrior', 'unit.scout', 'unit.knight'];
+export const UNIT_TYPE_ORDER: readonly string[] = ['unit.builder', 'unit.scout', 'unit.warrior', 'unit.knight'];
 export const TECH_ORDER: readonly string[] = ['tech.orchard', 'tech.hunt', 'tech.steel'];
 
 /** 表现层文案（i18n 属 presentation 层，core 不读） */
 export const UNIT_LABELS: Record<string, string> = {
+  'unit.builder': '工兵',
   'unit.warrior': '步兵',
   'unit.scout': '斥候',
   'unit.knight': '骑士',

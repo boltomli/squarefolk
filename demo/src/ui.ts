@@ -123,6 +123,7 @@ const TERRAIN_STYLE: Record<string, { bg: string; mark: string; name: string }> 
 };
 
 const UNIT_ICON: Record<string, string> = {
+  'unit.builder': '🛠️',
   'unit.warrior': '⚔️',
   'unit.scout': '🏹',
   'unit.knight': '🐎',

@@ -394,8 +394,10 @@ function onTile(x: number, y: number): void {
   if (session.selectedUnitId !== null && session.reachableCells.some((cell) => cell.x === x && cell.y === y)) {
     const unitId = session.selectedUnitId;
     if (submit({ type: 'move', unitId, x, y }) !== null) {
-      note('已移动');
-      clearSelection();
+      // 手感修订（2026-10-07）：移动后**保持选中**并重算高亮 —— 走打一体（§4.1-G 默认 true）
+      // → 立即红框显示可攻目标；旧版 clearSelection() 清掉一切提示，体感"移完就不能打"。
+      recomputeHighlights();
+      note(session.attackTargets.size > 0 ? '已移动 · 红框目标可攻击' : '已移动');
     }
     renderNow();
     return;

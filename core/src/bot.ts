@@ -77,7 +77,16 @@ export function botAction(
 
   // 第 2–8 层：按类型过滤，首个非空层内 L0
   for (const type of L1_TYPE_LAYERS) {
-    const pool = actions.filter((action) => action.type === type);
+    let pool = actions.filter((action) => action.type === type);
+    // 策略层细化（非规则，不入 balance）：attack 层跳过 0 攻单位（工兵 atk10=0 → 0 伤害纯送死）；
+    // 层语义仍是 §8.2 的 attack 层，仅不派炮灰；类型未知时按可攻处理（保守不改变行为）
+    if (type === 'attack') {
+      pool = pool.filter((action) => {
+        const unit = state.units.find((entry) => entry.id === action.unitId);
+        const def = unit !== undefined ? ctx.unitTypes[unit.type] : undefined;
+        return def === undefined || def.atk10 > 0;
+      });
+    }
     if (pool.length > 0) return pick(pool);
   }
 
