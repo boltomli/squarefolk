@@ -558,17 +558,23 @@ export function applyAction(
           boni: [...attackBoni(next, target, attacker), ...defenseBoni(next, target, true)],
         },
       );
-      // §4.1-D：伤害落地 → 存活判定 → 反击落地 → 击杀结算 → 攻方 acted
+      // §4.1-D：伤害落地 → 存活判定 → 反击落地 → 4c 攻方阵亡判定 → 击杀结算 → 攻方 acted
       attacker.hp = result.attackerHpAfter;
       target.hp = result.defenderHpAfter;
+      if (result.defenderDied) removeUnit(next, target.id);
+      if (result.attackerHpAfter === 0) {
+        // §4.1-D 4c（2026-10-07 补，修「hp=0 尸体占格」bug）：攻方被反击致死 → 移除，跳过步骤 5/6 ——
+        // 死兵不补位、不晋升、不计 acted；反击击杀不触发任何补位（补位仅属步骤 5 主动击杀）；
+        // 同归于尽（守方已先移除 + 攻方此刻移除）= 两尸俱移。
+        removeUnit(next, attacker.id);
+        break;
+      }
       attacker.attacked = true;
       if (result.defenderDied) {
-        removeUnit(next, target.id);
-        // killSwap（§4.1-D）：目标格可通行且空 → 攻方补位；否则留原地（§5 近战补位受阻）。
+        // killSwap（§4.1-D 步骤 5）：目标格可通行且空 → 攻方补位；否则留原地（§5 近战补位受阻）。
         // §4.1-5 敌城语义：补位进敌城格同受 §4.4 占领门 —— 墙未破 或 起点与城非相邻 →
         // 补位受阻、攻方留原地（门的第三条件「城格无单位」在守军移除后恒成立）。
-        // 歧义待规格层拍板（见文件头）：过门补位进**墙已破**敌城是否即占领 —— §4.4 钉的
-        // 「move 进入即占领」未覆盖 killSwap 路径 → 此处不改 owner，仅按门决定补位与否。
+        // 过门补位进墙已破敌城 = 即占领（2026-10-06 裁决，见文件头）→ 同一 captureEnemyCity 路径。
         const killSwap = atkType.killSwap ?? atkType.range <= 1;
         if (killSwap && isPassable(next, target.x, target.y)) {
           const swapCityId = next.tiles[target.y][target.x].cityId;

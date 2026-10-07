@@ -1,0 +1,40 @@
+{
+  "id": "turn/attacker-dies-counter",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1-D 4c 攻方阵亡判定（反击致死 → 移除、无补位；2026-10-07 补）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 3, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.knight", "x": 1, "y": 1, "hp": 10, "maxHp": 10, "atk10": 30, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": {
+      "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] },
+      "unit.knight": { "cost": 6, "hp": 10, "atk10": 30, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] }
+    },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "attack", "unitId": "unit.000001", "targetId": "unit.000002" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [
+      { "id": "unit.000002", "owner": "B", "type": "unit.knight", "x": 1, "y": 1, "hp": 8, "maxHp": 10, "atk10": 30, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "winner": null
+  },
+  "notes": "手推：残血攻方(hp3) 打满血骑士 —— 伤害 = 20×3×(10+3)×M(def30=20+姿态10 → M=64)/(2000×10) = 49920/20000 → rhu 2 → 骑士 10→8 存活；全额反击 = 30×3×(10+8)×M(攻方 def30 → M64)/20000 = 103680/20000 → rhu 5 → 攻方 3−5 → max(0)=0 **阵亡** → §4.1-D 4c：移除攻方、无补位（反击击杀不触发补位）、无晋升、跳过 acted；守方原地不动。旧实现只移除守方 → 攻方 hp0 尸体留场（用户报的『0 的敌方兵占格』）→ 本向量红"
+}

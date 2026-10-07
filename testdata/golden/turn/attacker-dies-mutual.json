@@ -1,0 +1,35 @@
+{
+  "id": "turn/attacker-dies-mutual",
+  "rulesVersion": "0.1.0",
+  "source": "core-spec §4.1-D 4c + §4.1-F 同归于尽（低血攻方 × 垂死反击，单次交战可达 → 两尸俱移）",
+  "given": {
+    "fixture": "actionApply",
+    "map": { "h": 3, "w": 3, "terrain": ["...", "...", "..."], "roads": [], "villages": [], "resources": [], "explored": [] },
+    "units": [
+      { "id": "unit.000001", "owner": "A", "type": "unit.warrior", "x": 0, "y": 1, "hp": 1, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000001", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false },
+      { "id": "unit.000002", "owner": "B", "type": "unit.warrior", "x": 1, "y": 1, "hp": 2, "maxHp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1], "homeCity": "city.000002", "kills": 0, "promoted": false, "moved": false, "attacked": false, "healed": false }
+    ],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "players": [
+      { "id": "A", "stars": 5, "techs": [], "met": [], "eliminated": false },
+      { "id": "B", "stars": 5, "techs": [], "met": [], "eliminated": false }
+    ],
+    "unitTypes": { "unit.warrior": { "cost": 5, "hp": 10, "atk10": 20, "def10": 20, "move": 2, "range": 1, "counter": [1, 1] } },
+    "techs": {}, "resources": {},
+    "currentPlayer": "A", "turn": 0, "phase": "act",
+    "action": { "type": "attack", "unitId": "unit.000001", "targetId": "unit.000002" }
+  },
+  "expect": {
+    "rejected": false,
+    "units": [],
+    "cities": [
+      { "id": "city.000001", "x": 0, "y": 0, "owner": "A", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true },
+      { "id": "city.000002", "x": 2, "y": 2, "owner": "B", "level": 1, "population": 0, "hasWorkshop": false, "hasWall": false, "wallDurability": 0, "isCapital": true }
+    ],
+    "winner": null
+  },
+  "notes": "同归于尽（§4.1-F 修订：单次交战可达）手推：攻方满攻 + E(攻)=11(hp1) —— 伤害 = 20×3×11×M(def30→64)/20000 = 42240/20000 → rhu 2 → 守方 hp2→0 阵亡；垂死反击 k=4：基数 = 20×3×(10+2)×M(攻方def30→64) = 46080，rhu(46080, 20000×4=80000) = 1 → 攻方 1−1 = 0 **同死** → 4c 两尸俱移、无补位（守方没活到能补位，攻方死兵不补位）、winner null（双城各属）"
+}
