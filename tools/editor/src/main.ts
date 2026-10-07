@@ -9,13 +9,22 @@ import './style.css';
 import { invoke } from '@tauri-apps/api/core';
 import { CONTENT_PAIRS, validateDataFiles } from '../../validate-core.mjs';
 import { dumpMarkdown } from '../../dump-core.mjs';
+import { contentHash } from '../../content-hash.mjs';
 import { structuredDiff, type DiffEntry } from './diff';
-import { parseTable, setCellValue, addRecord, removeRecord } from './table';
+import { parseTable, setCellValue, addRecord, removeRecord, formatRecord } from './table';
+import { buildZip } from './zip';
+import { modelTechTree, renderTechTree, type TechTreeRecord } from './techtree';
 
 const DEBOUNCE_MS = 300;
 
 /** 可表格化的四件 id 记录文件（balance 是嵌套配置，只走源码视图） */
 const RECORD_FILES = new Set(['units.json', 'techs.json', 'improvements.json', 'resources.json']);
+
+/** 底部面板 tab 名（index.html #panel-tabs 一一对应） */
+type TabName = 'errors' | 'diff' | 'preview' | 'tests';
+
+/** 视图名（工具栏三按钮一一对应） */
+type ViewName = 'source' | 'table' | 'techtree';
 
 // ── DOM ──
 const elFileList = document.getElementById('file-list') as HTMLElement;
@@ -24,23 +33,29 @@ const elDirty = document.getElementById('dirty-flag') as HTMLElement;
 const elSave = document.getElementById('btn-save') as HTMLButtonElement;
 const elDiff = document.getElementById('btn-diff') as HTMLButtonElement;
 const elExport = document.getElementById('btn-export') as HTMLButtonElement;
+const elExportPack = document.getElementById('btn-export-pack') as HTMLButtonElement;
+const elRunTests = document.getElementById('btn-run-tests') as HTMLButtonElement;
 const elStatus = document.getElementById('status') as HTMLElement;
 const elSource = document.getElementById('source') as HTMLTextAreaElement;
 const elPanelErrors = document.getElementById('panel-errors') as HTMLElement;
 const elPanelDiff = document.getElementById('panel-diff') as HTMLElement;
 const elPanelPreview = document.getElementById('panel-preview') as HTMLElement;
+const elPanelTests = document.getElementById('panel-tests') as HTMLElement;
 const elTablePane = document.getElementById('table-pane') as HTMLElement;
 const elTableScroll = document.getElementById('table-scroll') as HTMLElement;
 const elEditorPane = document.getElementById('editor-pane') as HTMLElement;
+const elTechtreePane = document.getElementById('techtree-pane') as HTMLElement;
 const elBtnSource = document.getElementById('btn-view-source') as HTMLButtonElement;
 const elBtnTable = document.getElementById('btn-view-table') as HTMLButtonElement;
+const elBtnTechtree = document.getElementById('btn-view-techtree') as HTMLButtonElement;
 const elNewRowId = document.getElementById('new-row-id') as HTMLInputElement;
 const elAddRow = document.getElementById('btn-add-row') as HTMLButtonElement;
 
-const TAB_PANELS: Record<string, { tab: HTMLElement; panel: HTMLElement }> = {
+const TAB_PANELS: Record<TabName, { tab: HTMLElement; panel: HTMLElement }> = {
   errors: { tab: document.getElementById('tab-errors') as HTMLElement, panel: elPanelErrors },
   diff: { tab: document.getElementById('tab-diff') as HTMLElement, panel: elPanelDiff },
   preview: { tab: document.getElementById('tab-preview') as HTMLElement, panel: elPanelPreview },
+  tests: { tab: document.getElementById('tab-tests') as HTMLElement, panel: elPanelTests },
 };
 
 // ── 状态 ──
@@ -53,17 +68,20 @@ const schemas: Record<string, unknown> = {};
 let active = CONTENT_PAIRS[0][0] as string;
 let debounceTimer: number | undefined;
 let validateSeq = 0;
-let view: 'source' | 'table' = 'source';
+let view: ViewName = 'source';
+/** 「跑测试」进行中标志 —— 防重入（按钮同时 disabled） */
+let testsRunning = false;
 
 function setStatus(text: string, isError = false): void {
   elStatus.textContent = text;
   elStatus.classList.toggle('error', isError);
 }
 
-function showTab(name: 'errors' | 'diff' | 'preview'): void {
+function showTab(name: TabName): void {
   for (const [key, { tab, panel }] of Object.entries(TAB_PANELS)) {
     const on = key === name;
     tab.classList.toggle('active', on);
+    tab.setAttribute('aria-selected', String(on));
     panel.hidden = !on;
   }
 }
@@ -93,11 +111,29 @@ function selectFile(dataFile: string): void {
   active = dataFile;
   elSource.value = contents[dataFile] ?? '';
   elActiveName.textContent = dataFile;
-  if (view === 'table' && !RECORD_FILES.has(dataFile)) setView('source');
+  // 科技树只在 techs.json 可用；切走时回源码视图（表格视图同理）
+  if (view === 'techtree' && dataFile !== 'techs.json') setView('source');
+  else if (view === 'table' && !RECORD_FILES.has(dataFile)) setView('source');
   else if (view === 'table') renderTable();
+  else if (view === 'techtree') renderTechtree();
+  updateViewButtons();
   updateDirty();
   renderFileList();
   scheduleValidate();
+}
+
+/** 依 active 文件同步三视图按钮可用态与 aria-pressed */
+function updateViewButtons(): void {
+  elBtnTable.disabled = !RECORD_FILES.has(active);
+  elBtnTechtree.disabled = active !== 'techs.json';
+  for (const [btn, on] of [
+    [elBtnSource, view === 'source'],
+    [elBtnTable, view === 'table'],
+    [elBtnTechtree, view === 'techtree'],
+  ] as const) {
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', String(on));
+  }
 }
 
 function updateDirty(): void {
@@ -106,27 +142,52 @@ function updateDirty(): void {
   elSave.disabled = !dirty;
 }
 
-// ── M2 表格视图 ──
-function setView(next: 'source' | 'table'): void {
+// ── M2 表格视图 / M4 科技树视图 ──
+function setView(next: ViewName): void {
   if (next === 'table' && !RECORD_FILES.has(active)) return;
+  if (next === 'techtree' && active !== 'techs.json') return;
   flushActive();
   view = next;
-  const isTable = next === 'table';
-  elEditorPane.hidden = isTable;
-  elTablePane.hidden = !isTable;
-  elBtnSource.classList.toggle('active', !isTable);
-  elBtnTable.classList.toggle('active', isTable);
-  elBtnTable.disabled = !RECORD_FILES.has(active);
-  if (isTable) renderTable();
+  elEditorPane.hidden = next !== 'source';
+  elTablePane.hidden = next !== 'table';
+  elTechtreePane.hidden = next !== 'techtree';
+  if (next === 'table') renderTable();
+  else if (next === 'techtree') renderTechtree();
   else elSource.value = contents[active] ?? '';
+  updateViewButtons();
+}
+
+/** 科技树渲染：数据 = 当前缓冲（不另读盘）；节点点击 → 底部面板完整记录 */
+function renderTechtree(): void {
+  renderTechTree(elTechtreePane, contents['techs.json'] ?? '', showTechRecord);
+}
+
+/** 节点点击：底部面板显示该科技完整记录（复用 table.ts formatRecord，不实现规则） */
+function showTechRecord(id: string): void {
+  const model = modelTechTree(contents['techs.json'] ?? '');
+  showTab('preview');
+  elPanelPreview.textContent = '';
+  const head = document.createElement('p');
+  head.className = 'dim';
+  head.textContent = `科技记录 ${id}（techs.json 当前缓冲）`;
+  elPanelPreview.appendChild(head);
+  const pre = document.createElement('pre');
+  pre.className = 'markdown';
+  if (!model.ok) {
+    pre.textContent = model.error;
+  } else {
+    const rec: TechTreeRecord | undefined = model.techs.get(id);
+    pre.textContent = rec === undefined ? `未知科技：${id}` : formatRecord(rec);
+  }
+  elPanelPreview.appendChild(pre);
 }
 
 /** 单元格提交：table.ts 纯函数改文本 → 更新缓冲 → 重建表格 + 防抖校验；失败仅提示不写 */
 function commitCell(id: string, column: string, input: HTMLInputElement): void {
   const result = setCellValue(contents[active], active.replace(/\.json$/, ''), id, column, input.value);
   if (!result.ok) {
+    // 校验失败：不写缓冲、不重建表格 —— 输入框保留用户原输入待改正，错误上屏
     setStatus(result.error, true);
-    input.value = column in (active ? {} : {}) ? input.value : input.value; // 保留原输入待改正
     return;
   }
   contents[active] = result.text;
@@ -377,6 +438,107 @@ function showExport(): void {
   setStatus(`已生成 Markdown（${result.length} 字节）`);
 }
 
+// ── M4 导出数据包（content-hash 纯核心 + zip 手写 + Rust 落盘） ──
+/**
+ * 组装数据包：五件内容文件（原文）+ manifest.json。
+ * manifest = { format, rulesVersion, contentHash, files }（design §6.1 v0.25 定案）；
+ * rulesVersion 取任一文件头（按 CONTENT_PAIRS 序取首个存在者）。
+ */
+async function exportPack(): Promise<void> {
+  flushActive();
+  const texts: string[] = [];
+  const files: Record<string, { schemaVersion: number }> = {};
+  let rulesVersion: string | undefined;
+  for (const [dataFile] of CONTENT_PAIRS) {
+    const text = contents[dataFile] ?? '';
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      setStatus(`导出失败：${dataFile} 解析失败 — ${(e as Error).message}`, true);
+      return;
+    }
+    if (parsed === null || typeof parsed !== 'object') {
+      setStatus(`导出失败：${dataFile} 不是对象`, true);
+      return;
+    }
+    if (!('schemaVersion' in parsed) || typeof parsed.schemaVersion !== 'number') {
+      setStatus(`导出失败：${dataFile} 缺 schemaVersion`, true);
+      return;
+    }
+    files[dataFile] = { schemaVersion: parsed.schemaVersion };
+    if (rulesVersion === undefined && 'rulesVersion' in parsed && typeof parsed.rulesVersion === 'string') {
+      rulesVersion = parsed.rulesVersion;
+    }
+    texts.push(text);
+  }
+  if (rulesVersion === undefined) {
+    setStatus('导出失败：任一文件头均无 rulesVersion', true);
+    return;
+  }
+  const hash = contentHash(texts);
+  const manifest = {
+    format: 'squarefolk-data-pack',
+    rulesVersion,
+    contentHash: hash,
+    files,
+  };
+  const encoder = new TextEncoder();
+  const entries = CONTENT_PAIRS.map(([dataFile]) => ({
+    name: dataFile,
+    bytes: encoder.encode(contents[dataFile] ?? ''),
+  }));
+  entries.push({ name: 'manifest.json', bytes: encoder.encode(`${JSON.stringify(manifest, null, 2)}\n`) });
+  const filename = `squarefolk-data-${hash.slice(0, 8)}.zip`;
+  setStatus(`打包中…（contentHash ${hash.slice(0, 8)}）`);
+  try {
+    const bytes = buildZip(entries);
+    const path = await invoke<string>('export_pack', { data: Array.from(bytes), filename });
+    setStatus(`已导出 ${path}`);
+  } catch (e) {
+    // 拒绝理由 verbatim 上屏（铁律）
+    setStatus(`${e}`, true);
+  }
+}
+
+// ── M4 改动即跑回归（sim 未建，先顶 npm test） ──
+async function runTests(): Promise<void> {
+  if (testsRunning) return;
+  testsRunning = true;
+  elRunTests.disabled = true;
+  showTab('tests');
+  elPanelTests.textContent = '';
+  const running = document.createElement('p');
+  running.className = 'dim';
+  running.textContent = '⏳ npm test 运行中…';
+  elPanelTests.appendChild(running);
+  setStatus('跑测试中…');
+  try {
+    const report = await invoke<{ code: number; output: string }>('run_tests');
+    elPanelTests.textContent = '';
+    const verdict = document.createElement('p');
+    const pass = report.code === 0;
+    verdict.className = pass ? 'ok' : 'error';
+    verdict.textContent = `${pass ? '✓' : '✗'} npm test（退出码 ${report.code}）`;
+    elPanelTests.appendChild(verdict);
+    const pre = document.createElement('pre');
+    pre.className = 'markdown';
+    pre.textContent = report.output;
+    elPanelTests.appendChild(pre);
+    setStatus(`npm test 退出码 ${report.code}`, !pass);
+  } catch (e) {
+    elPanelTests.textContent = '';
+    const err = document.createElement('p');
+    err.className = 'error';
+    err.textContent = `跑测试失败：${e}`;
+    elPanelTests.appendChild(err);
+    setStatus(`跑测试失败：${e}`, true);
+  } finally {
+    testsRunning = false;
+    elRunTests.disabled = false;
+  }
+}
+
 // ── 启动 ──
 async function boot(): Promise<void> {
   setStatus('装载 data/…');
@@ -393,6 +555,7 @@ async function boot(): Promise<void> {
   elSource.value = contents[active];
   elActiveName.textContent = active;
   renderFileList();
+  updateViewButtons();
   updateDirty();
   const errors = runValidate();
   setStatus(`就绪 — 5 个文件，${errors.length} 个校验错误`);
@@ -412,8 +575,13 @@ elSource.addEventListener('keydown', (e) => {
 elSave.addEventListener('click', () => void saveActive());
 elDiff.addEventListener('click', () => void showDiff());
 elExport.addEventListener('click', showExport);
+elExportPack.addEventListener('click', () => void exportPack());
+elRunTests.addEventListener('click', () => void runTests());
+elBtnSource.addEventListener('click', () => setView('source'));
+elBtnTable.addEventListener('click', () => setView('table'));
+elBtnTechtree.addEventListener('click', () => setView('techtree'));
 for (const [name, { tab }] of Object.entries(TAB_PANELS)) {
-  tab.addEventListener('click', () => showTab(name as 'errors' | 'diff' | 'preview'));
+  tab.addEventListener('click', () => showTab(name as TabName));
 }
 
 void boot();

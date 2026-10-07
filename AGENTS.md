@@ -17,6 +17,7 @@
 > **Phase 12.3 城籍规矩 + 容量归属过滤（用户拍板「仅攻占换籍」，design v0.22）**：城籍 = 出生城 + 攻占事件（captureEnemyCity 内 `unit.homeCity = city.id`；路经/走回自己城不改 → `turn/enter-own-city-no-rebind`）；容量计数补 `unit.owner === city.owner` 过滤（修敌方残兵占坑 bug，过滤在计数不清数据 → `turn/capacity-owner-filter`）；capture-move-in/conquest 补入籍断言 + killSwap 单测补断言。turn 31/31、总 **142** 断言全绿。**)
 > **Phase 12.4 攻方反击致死补 4c（用户报 hp=0 尸体占格 bug，design v0.23）**：§4.1-D 新增步骤 4c（counter 落地后攻方 hp=0 → 移除、跳过补位/晋升/acted；反击击杀无补位；同归于尽两尸俱移）+ §4.1-F/§5 错误表述改正；actions.ts attack 结算重排（守方先移、攻方 4c 判定、顺带清掉过期歧义注释）；新向量 attacker-dies-counter / attacker-dies-mutual（先红后绿）→ turn 33/33、总 **144** 断言全绿。**)
 > **Phase 12.5 三拍板（design v0.24）**：① 结算后开全图（demo refreshView settled=全图 explored+视野强制 visible+敌兵直读 state；结算前迷雾照旧）② §4.7 征服重定义 = 全对手淘汰 **或** 对手 0 城 0 兵（**攻占首都 ≠ 即时胜**，残兵 T4 宽限优先；旧全首都判据与 ≥2 守卫废止；单人 <2 玩家无胜利；checkVictory 改写）③ 围城可招兵（train 撤 isBesieged；收入/治疗/城防仍被封）。新向量 conquest-waits-remnant + train-under-siege（先红后绿）、capture-conquest/basic-ordered notes 校准、demo 胜负文案改写。turn 35/35、总 **146** 断言全绿 + repack 75,910B。**)
+> **Phase 9.1 编辑器 M4 三件（design v0.25，omp 两轮 + 父六路复核）**：① 科技树图形化（`techtree.ts` 零依赖 SVG：tier 分列、requires 箭头、节点点击 → 底部面板原样上屏；仅 techs.json 视图解禁）② 导出数据包（新纯核心 `tools/content-hash.mjs`：stableStringify 递归键字典序 + fnv1a64（标准向量 `''=cbf29ce484222325`、`'a'=af63dc4c8601ec8c`）+ contentHash(CONTENT_PAIRS 序) → `zip.ts` 零依赖 STORE zip（DOS 时间固定确定性）+ Rust `export_pack` 字面白名单 `^squarefolk-data-[0-9a-f]{8}.zip$` 写 `dist/` + canonicalize 防逃逸（逃出即删）；文件名内容寻址）③ 改动即跑回归（Rust `run_tests` spawn `npm test` → 底部第 4 tab「测试」，防重入；sim 属 D10 未建先顶回归套件）④ `main.ts` 无操作死代码清理。验收亲测：编辑器 `tsc+build` ✓、`cargo check` + **6 例**（原 3 + export_pack 白名单 2 + run_tests 1）✓、根 **146 断言** ✓、content-hash 键序无关/内容敏感 ✓、红线零破（禁区零改动、依赖表逐字未变、validate/dump/hash 均走 tools/ 纯核心）。**
 
 ## 必读顺序
 
@@ -63,8 +64,8 @@ testdata/golden/     语言无关黄金测试向量
 core/                规则核心（Phase 1：TypeScript，规格 = docs/core-spec.md §4.1）
 demo/                Phase 6 单文件可玩 demo：src/（main/ui/map/config + style.css）、template.html、产物 squarefolk.html（npm run demo 生成）
 scripts/             构建脚本（build-demo.mjs：把 esbuild 的 JS/CSS 内联进 HTML 模板）
-tools/               配置工具 CLI（validate-core.mjs 纯核心 + validate.mjs / validate-selftest.mjs / dump-core.mjs / dump.mjs 已落地；diff、sim [规划]）
-tools/editor/        桌面数据编辑器 MVP（Phase 9：Tauri 2.x 独立子包，自己的 package.json/node_modules；vite + TS 前端 src/、Rust 后端 src-tauri/）
+tools/               配置工具 CLI（validate-core.mjs 纯核心 + validate.mjs / validate-selftest.mjs / dump-core.mjs / dump.mjs + content-hash.mjs 已落地；diff、sim [规划]）
+tools/editor/        桌面数据编辑器（Phase 9 MVP + 9.1 M4 补齐：Tauri 2.x 独立子包，自己的 package.json/node_modules；vite + TS 前端 src/、Rust 后端 src-tauri/）
 ```
 
 > 标 `[规划]` 的目录尚不存在；创建时须按 design §6 的目录结构与命名。
@@ -81,7 +82,8 @@ tools/editor/        桌面数据编辑器 MVP（Phase 9：Tauri 2.x 独立子�
     - `cd tools/editor && npm install` —— 装子包依赖（vite / @tauri-apps/cli / @tauri-apps/api / typescript；根 node_modules 零新增）
     - `npm run dev` —— `tauri dev`：beforeDevCommand 拉 vite（端口 1420 固定）+ 开窗口「Squarefolk 数据工坊」
     - `npm run build` —— `tsc --noEmit && vite build` → `tools/editor/dist/`
-    - `cd src-tauri && cargo check` / `cargo test` —— Rust 侧自查（三命令 + 路径白名单 3 例）；⚠ exFAT 卷上 `target/` 已是指向 `~/.cache/squarefolk-editor-target`（APFS）的符号链接，勿删；`capabilities/` 若出现 `._*.json` 兄弟文件会让 tauri-build 报 JSON 解析错，`find . -name '._*' -delete` 即愈
+    - 功能面（Phase 9.1 / design M4）：源码/表格/**科技树**三视图（techs.json → 零依赖 SVG tier 分层 + requires 箭头 + 节点上屏）、实时校验、HEAD diff、Markdown 导出、**导出数据包**（`tools/content-hash.mjs` 纯核心 contentHash + 零依赖 STORE zip → Rust `export_pack` 白名单写 `dist/squarefolk-data-<hash8>.zip`，文件名内容寻址 + canonicalize 兜底）、**跑测试**（Rust `run_tests` → 仓库根 `npm test` → 底部「测试」tab；sim 未建先顶回归套件）
+    - `cd src-tauri && cargo check` / `cargo test` —— Rust 侧自查（五命令 read/write/git_show_head/export_pack/run_tests + 路径白名单 6 例）；⚠ exFAT 卷上 `target/` 已是指向 `~/.cache/squarefolk-editor-target`（APFS）的符号链接，勿删；`capabilities/` 若出现 `._*.json` 兄弟文件会让 tauri-build 报 JSON 解析错，`find . -name '._*' -delete` 即愈
   - 自查：`grep -rn "TODO\|FIXME\|XXX" docs/`
   - 改了公式 → 核对 design §3.7 的 8 组标定数值是否仍然自洽
 - **后续补充**：`sim` —— 添加时**必须同步更新本节**（本文件的命令不能过期）。

@@ -13,6 +13,7 @@
         <div id="sidebar-actions">
           <button id="btn-diff" type="button">与 HEAD 对比</button>
           <button id="btn-export" type="button">导出 Markdown</button>
+          <button id="btn-run-tests" type="button">▶ 跑测试</button>
         </div>
       </aside>
       <main id="main">
@@ -20,10 +21,12 @@
           <span id="active-name">—</span>
           <span id="dirty-flag" hidden>● 未保存</span>
           <div id="view-switch" role="group" aria-label="视图切换">
-            <button id="btn-view-source" class="view-btn active" type="button">源码</button>
-            <button id="btn-view-table" class="view-btn" type="button">表格</button>
+            <button id="btn-view-source" class="view-btn active" type="button" aria-pressed="true">源码</button>
+            <button id="btn-view-table" class="view-btn" type="button" aria-pressed="false">表格</button>
+            <button id="btn-view-techtree" class="view-btn" type="button" aria-pressed="false" disabled>科技树</button>
           </div>
           <button id="btn-save" type="button" disabled>保存</button>
+          <button id="btn-export-pack" type="button">导出数据包</button>
           <span id="status" role="status"></span>
         </header>
         <section id="editor-pane">
@@ -42,15 +45,18 @@
             <button id="btn-add-row" type="button">＋ 添加行</button>
           </div>
         </section>
+        <section id="techtree-pane" aria-label="科技树视图" hidden></section>
         <section id="bottom-pane">
-          <div id="panel-tabs" role="tablist">
-            <button id="tab-errors" class="tab active" role="tab" type="button">校验错误</button>
-            <button id="tab-diff" class="tab" role="tab" type="button">diff</button>
-            <button id="tab-preview" class="tab" role="tab" type="button">导出预览</button>
+          <div id="panel-tabs" role="tablist" aria-label="底部面板">
+            <button id="tab-errors" class="tab active" role="tab" type="button" aria-selected="true" aria-controls="panel-errors">校验错误</button>
+            <button id="tab-diff" class="tab" role="tab" type="button" aria-selected="false" aria-controls="panel-diff">diff</button>
+            <button id="tab-preview" class="tab" role="tab" type="button" aria-selected="false" aria-controls="panel-preview">导出预览</button>
+            <button id="tab-tests" class="tab" role="tab" type="button" aria-selected="false" aria-controls="panel-tests">测试</button>
           </div>
-          <div id="panel-errors" class="panel" role="tabpanel"></div>
-          <div id="panel-diff" class="panel" role="tabpanel" hidden></div>
-          <div id="panel-preview" class="panel" role="tabpanel" hidden></div>
+          <div id="panel-errors" class="panel" role="tabpanel" aria-labelledby="tab-errors"></div>
+          <div id="panel-diff" class="panel" role="tabpanel" aria-labelledby="tab-diff" hidden></div>
+          <div id="panel-preview" class="panel" role="tabpanel" aria-labelledby="tab-preview" hidden></div>
+          <div id="panel-tests" class="panel" role="tabpanel" aria-labelledby="tab-tests" hidden></div>
         </section>
       </main>
     </div>

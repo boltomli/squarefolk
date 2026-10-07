@@ -143,6 +143,13 @@ body {
   display: flex;
 }
 
+/* 作者规则 display:flex 会盖过 UA 的 [hidden]{display:none} —— 显式补回，否则切视图时源码区不消失 */
+#editor-pane[hidden],
+#table-pane[hidden],
+#techtree-pane[hidden] {
+  display: none;
+}
+
 #source {
   flex: 1;
   resize: none;
@@ -239,4 +246,123 @@ body {
   background: #232833;
   color: #d8dde4;
   cursor: pointer;
+}
+
+/* ── 视图切换（源码 / 表格 / 科技树） ── */
+#view-switch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid #2a2f38;
+  border-radius: 6px;
+  background: #14171c;
+}
+
+.view-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #8b93a1;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.view-btn.active {
+  background: #2b3444;
+  color: #fff;
+}
+
+.view-btn:disabled {
+  color: #4b525e;
+  cursor: default;
+}
+
+.view-btn:disabled:hover {
+  background: none;
+}
+
+#btn-export-pack {
+  padding: 6px 14px;
+  border: 1px solid #3a4150;
+  border-radius: 6px;
+  background: #232833;
+  color: #d8dde4;
+  cursor: pointer;
+}
+
+#btn-export-pack:hover {
+  background: #2b3444;
+}
+
+#sidebar-actions button:disabled {
+  color: #6b7280;
+  cursor: default;
+}
+
+/* ── 科技树视图 ── */
+#techtree-pane {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  background: #14171c;
+}
+
+#techtree-pane svg {
+  display: block;
+}
+
+.tt-col-title {
+  fill: #fff;
+  font: 600 14px/1.4 -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif;
+}
+
+.tt-col-sub {
+  fill: #8b93a1;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.tt-node {
+  cursor: pointer;
+}
+
+.tt-card {
+  fill: #1a1e25;
+  stroke: #3a4150;
+  stroke-width: 1;
+}
+
+.tt-node:hover .tt-card {
+  stroke: #2f81f7;
+}
+
+.tt-node:focus {
+  outline: none;
+}
+
+.tt-node:focus-visible .tt-card {
+  stroke: #2f81f7;
+  stroke-width: 2;
+}
+
+.tt-id {
+  fill: #9ecbff;
+  font: 600 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.tt-cost {
+  fill: #e5b567;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.tt-req {
+  fill: #8b93a1;
+  font: 12px/1.4 -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif;
+}
+
+.tt-edge {
+  stroke: #576074;
+  stroke-width: 1.5;
+  fill: none;
 }
