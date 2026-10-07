@@ -7,6 +7,8 @@
 | `squarefolk-v0.1.0.html` | 游戏本体（`npm run demo` 产物快照，74 KB 单文件） |
 | `DESCRIPTION.md` | 页面文案（短描述 / 正文，中英双语，粘贴即用） |
 | `DEVLOG.md` | Devlog #1（英文，粘贴即用；无第三方游戏名） |
+| `push.sh` | **butler 一键上传**（用法 `./push.sh <owner>/<game>`，认证见脚本头注释；`.env`/`build/` 已 gitignore） |
+| `build/index.html` | 上传用目录（脚本会自动同步最新构建；butler validate 已过：*Will be opened as HTML5 app*） |
 | `screenshots/01-start.png` | 首图：起始屏（模式选择 + 种子）1280×720 |
 | `screenshots/02-vs-board.png` | 对战棋盘（迷雾 + 顶栏 + 规则面板） |
 | `screenshots/04-city-panel.png` | 城市面板（训练/升级/研究，按钮可用态） |
@@ -30,6 +32,20 @@
    - [ ] 胜利文案为新规（"对手无城无兵/被淘汰"，非"占领全部首都"）
    - [ ] 沙盒模式可完成（探索 100% + 占村）→ 结算开全图正常
    - [ ] 页面写明 **界面语言：中文**
+
+## 上传（butler 路径 —— 本体文件推荐）
+
+网页上传报 `Server failed to respond, please try again later` 是 itch.io 的老毛病（社区共识：浏览器/扩展冲突——Safari 最常见、代理节点抖动（换节点或直连都可能修好）、邮箱未验证、服务端抽风）。**封面/截图只能网页传** → 对策：换浏览器、手机端上传、切代理节点。**游戏本体用 butler 传**（官方 CLI，断点重试 + 增量上传 + 30GB 上限，网页只有 2GB）：
+
+```bash
+# 认证二选一（key 留本地，别贴聊天）
+butler login                                  # A) 浏览器授权一次，凭据落盘
+# 或: echo 'BUTLER_KEY=你的key' > .env && chmod 600 .env   # B) https://itch.io/user/settings/api-keys
+
+./push.sh <owner>/<game>                      # 推 build/ → :html channel（自动同步最新构建）
+```
+
+推完按脚本尾部提示去 Edit game 收尾：页面类型改 **HTML**、channel 勾 **HTML5 / Playable in browser**（入口 `index.html`）、Embed 1280×760。butler 本体已装 `/opt/homebrew/bin/butler`（v15.32.0，官方 broth darwin-arm64 稳定通道；**别用 brew cask butler** —— 那是别人的任务管理器）。`butler validate build/` 已过（*Will be opened as HTML5 app*）。
 
 ## 版本口径
 
