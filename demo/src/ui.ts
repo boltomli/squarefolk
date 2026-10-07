@@ -269,7 +269,7 @@ function unitHtml(model: ViewModel): string {
   const home =
     unit.homeCity === null
       ? '<p class="hint">母城：无（初始单位，不占城容量）</p>'
-      : `<p class="hint">母城：<b class="chip"${unit.homeColor === null ? '' : ` style="background:${unit.homeColor}"`}>${unit.homeTag ?? '?'}</b> ${esc(unit.homeLabel ?? unit.homeCity)} <small>${unit.homeCity}</small></p>`;
+      : `<p class="hint">母城：<b class="chip"${unit.homeColor === null ? '' : ` style="background:${unit.homeColor}"`}>${unit.homeTag ?? '?'}</b> ${esc(unit.homeLabel ?? unit.homeCity)}</p>`;
   let harvest = '';
   if (unit.onResource !== null) {
     const label = RESOURCE_LABELS[unit.onResource] ?? unit.onResource;
@@ -281,7 +281,7 @@ function unitHtml(model: ViewModel): string {
     }
   }
   return `<section class="card">
-    <h2>${esc(unit.label)} <small>${unit.id}</small></h2>
+    <h2>${esc(unit.label)}</h2>
     <p>HP ${unit.hp}/${unit.maxHp}${flags === '' ? '' : ` · ${flags}`}</p>
     ${home}
     <p class="hint">点击高亮格移动（绿框）· 点击红框目标攻击${unit.onOwnCity ? '；本格是你的城市，下方可操作' : ''}</p>
@@ -324,7 +324,7 @@ function cityHtml(model: ViewModel): string {
   return `<section class="card">
     <h2>${city.label.startsWith('首都') ? '🏰' : '🏠'} ${esc(city.label)} <b class="chip" style="background:${city.color}">${city.tag}</b>${
       city.isNew ? ' <b class="chip warn">本回合新占领</b>' : ''
-    } <small>${city.id}</small></h2>
+    }</h2>
     <p>城级 L${city.level} · 人口 ${city.population}/${city.popNeed} · 驻留 ${city.stationed}</p>
     <p class="hint">升级至 L${city.level + 1} 需 ${city.popNeed} 人口（消耗等额人口）</p>
     ${popHint}
@@ -338,10 +338,10 @@ function helpHtml(model: ViewModel): string {
   if (model.mode === 'vs') {
     return `<section class="card">
       <h2>对战目标</h2>
-      <p>1. 你先手（玩家 0）：点己方单位 → <b>绿框</b> = 可移动、<b>红框</b> = 可攻击（含敌城攻城），目标集来自 §8.1 legalActions。</p>
-      <p>2. 点己方城 🏰 → 训练 / 升级 / 修墙 / 研究；可选项按 legalActions 过滤，<code>✗</code> 为 core 拒绝原话。</p>
-      <p>3. 结束回合 → Bot 按 §8.2 L1 逐步行动（150ms/步），直到它结束回合回到你。</p>
-      <p>4. 攻占<b>全部首都</b> → 征服胜利；连续 ${ELIMINATION_GRACE} 回合无城 → 淘汰（上屏提示）。</p>
+      <p>1. 你先手：点己方单位 → <b>绿框</b> = 可移动、<b>红框</b> = 可攻击（含攻城）。</p>
+      <p>2. 点己方城 🏰 → 训练 / 升级 / 修墙 / 研究；按钮上的 <code>✗</code> 是当前不可用的原因。</p>
+      <p>3. 结束回合 → Bot 逐步行动，直到它结束回合回到你。</p>
+      <p>4. 胜利：让对手<b>无城无兵</b> → 立即获胜；对方只剩残兵 → 连续 ${ELIMINATION_GRACE} 回合无城即淘汰获胜。</p>
     </section>`;
   }
   return `<section class="card">

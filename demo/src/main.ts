@@ -788,7 +788,9 @@ function buildModel(): ViewModel {
               homeLabel:
                 homeCity === undefined
                   ? null
-                  : `${homeCity.isCapital ? '首都' : '城市'} ${homeTag ?? ''}`.trim(),
+                  : homeCity.isCapital
+                    ? '首都'
+                    : '城市',
               // §2 采集谓词由 core 裁定：探针只取拒绝原因上屏（规则不落在 UI）
               harvestBlocked:
                 onResource === null
@@ -904,7 +906,7 @@ function startMode(mode: Mode): void {
     session.state = result.setup.state;
     session.seed = seed;
     session.villageTotal = result.setup.villageTotal;
-    session.status = `对战开始 · 你先手（种子 ${seed}，worldgen 尝试 ${result.setup.attempts} 次）`;
+    session.status = `对战开始 · 你先手（种子 ${seed}）`;
   } else {
     session.state = createInitialState();
     session.villageTotal = VILLAGE_TOTAL;
