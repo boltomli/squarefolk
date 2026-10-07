@@ -7,7 +7,8 @@
 | `squarefolk-v0.1.0.html` | 游戏本体（`npm run demo` 产物快照，74 KB 单文件） |
 | `DESCRIPTION.md` | 页面文案（短描述 / 正文，中英双语，粘贴即用） |
 | `DEVLOG.md` | Devlog #1（英文，粘贴即用；无第三方游戏名） |
-| `push.sh` | **butler 一键上传**（用法 `./push.sh <owner>/<game>`，认证见脚本头注释；`.env`/`build/` 已 gitignore） |
+| `push.sh` | **butler 一键上传**（macOS/Linux，用法 `./push.sh <owner>/<game>`，认证见脚本头注释；`.env`/`build/` 已 gitignore） |
+| `push.ps1` | **butler 一键上传**（Windows PowerShell 版，用法 `.\push.ps1 <owner>/<game>`，逻辑与 `push.sh` 等同） |
 | `build/index.html` | 上传用目录（脚本会自动同步最新构建；butler validate 已过：*Will be opened as HTML5 app*） |
 | `screenshots/01-start.png` | 首图：起始屏（模式选择 + 种子）1280×720 |
 | `screenshots/02-vs-board.png` | 对战棋盘（迷雾 + 顶栏 + 规则面板） |
@@ -45,7 +46,14 @@ butler login                                  # A) 浏览器授权一次，凭�
 ./push.sh <owner>/<game>                      # 推 build/ → :html channel（自动同步最新构建）
 ```
 
-推完按脚本尾部提示去 Edit game 收尾：页面类型改 **HTML**、channel 勾 **HTML5 / Playable in browser**（入口 `index.html`）、Embed 1280×760。butler 本体已装 `/opt/homebrew/bin/butler`（v15.32.0，官方 broth darwin-arm64 稳定通道；**别用 brew cask butler** —— 那是别人的任务管理器）。`butler validate build/` 已过（*Will be opened as HTML5 app*）。
+Windows（PowerShell，凭据在 `~\.config\itch\butler_creds`，`.env` 无需 chmod）：
+
+```powershell
+.\push.ps1 <owner>/<game>                     # 推 build/ → :html channel（逻辑同 push.sh）
+# 执行策略拦住时: pwsh -NoProfile -ExecutionPolicy Bypass -File push.ps1 <owner>/<game>
+```
+
+推完按脚本尾部提示去 Edit game 收尾：页面类型改 **HTML**、channel 勾 **HTML5 / Playable in browser**（入口 `index.html`）、Embed 1280×760。butler 本体已装 `/opt/homebrew/bin/butler`（v15.32.0，官方 broth darwin-arm64 稳定通道；**别用 brew cask butler** —— 那是别人的任务管理器）；Windows 装 scoop 的 `butler`（v15.31.0，`scoop install butler`）。`butler validate build/` 已过（*Will be opened as HTML5 app*）。
 
 ## 版本口径
 
