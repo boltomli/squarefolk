@@ -33,6 +33,7 @@
 | v0.24 | **三条拍板（用户：结算开全图 / 占首都≠即时胜 / 围城可招兵）**：① **结算后开全图** —— demo `refreshView` 在 winner/沙盒完成态下 explored=全图、格子视野强制 visible、敌兵直读 state（结算前迷雾照旧，实测 20/80）；② **§4.7 征服重定义**：胜利 = 全部对手淘汰（T4 宽限耗尽）或对手**既无城也无兵** → 「外面有兵可以限时占任何城池」的宽限规矩优先 —— **攻占首都只是把对方推入 5 回合宽限、不再即时胜**（旧『全首都归一即胜』与 ≥2 首都守卫一并废止；单人配置无胜利判定；checkVictory 改为逐对手 eliminated/无城无兵判据、每次动作后检查）；③ **围城允许防守方招兵** —— 撤 train『未被围』谓词（收入/治疗/城防加成照旧被封；T2 每城一兵节奏保留）。向量：`conquest-waits-remnant`（占首都但对方有兵 → 不胜，对旧实现红）+ `train-under-siege`（被围可训，对旧实现红）→ **146 断言** |
 | v0.25 | **编辑器 M4 补齐 + 跨平台可执行规划（用户：完善 editor，同时开始规划跨平台可执行文件）**：① **§5.9.1 双轨规划** —— 轨A 编辑器 = Tauri bundler 三平台（dmg / msi+NSIS / AppImage+deb，分阶段签名表，exFAT target-symlink 坑复用）；轨B 游戏 demo = **零逻辑 Tauri 临时壳**（三件套不破、**不预判 D4** —— D4 选 Godot 则降级为评审工具，选 TS 则转正）+ itch 三通道复用参数化 push.sh 与 html 同源；轨C = CI 三 job（test / editor matrix / tag 触发 butler 推送，BUTLER_KEY 走 GitHub Secrets 永不入库）；② **contentHash 定案（M4）**：fnv1a64 over stableStringify(CONTENT_PAIRS 序) → 纯核心 `tools/content-hash.mjs`（编辑器与未来 CLI 同源，禁散落重实现）；③ **编辑器三件落地**：科技树图形化、导出数据包（STORE zip + manifest：format/rulesVersion/contentHash/各 schemaVersion；内容寻址 `squarefolk-data-<hash8>.zip`）、改动即跑回归（`run_tests` → `npm test` → 测试 tab；sim 未建先顶）+ 死代码清理；cargo 3→6 例、vite build、**146 断言**、hash 标准向量全绿（omp 两轮 + 父六路复核；零新依赖、禁区零改动） |
 | v0.26 | **壳分家定案（用户拍板：发行用 Neutralino、工具留 Tauri）**：§5.9.1 轨 B 从『Tauri 临时壳』改为 **Neutralinojs 发行壳** —— 四壳同机实测（3.2MB vs 9.9MB、1.3s vs 13s、唯一免编译热更、单机直出三端、内存持平 98.5MB）+ 分家理由（两壳零协同，Tauri 强项只在壳带逻辑时兑现）；轨 C ③ 降级为**单 job 直出三端**（免 OS 矩阵）；`neu build --macos-bundle` 生成已验、.app 冒烟留用户自测；Electrobun/Wails 淘汰（605MB 内存/外置盘不能跑 vs 60s/exFAT dev 废）；编辑器轨 A = Tauri 不动；**D4 边界不变**（M1 后正式壳仍按 §5.9 走 Godot/TapTap 评估）。PoC 不入库（~/disk/songl/poc-shells/）|
+| v0.27 | **Neutralino 壳入库（`shell/`）+「打开是项目主页」修复**：壳工程进仓库 —— `shell/neutralino.config.json`（零逻辑零 API）+ `scripts/build-shell.mjs`，入口 `npm run shell`（清幽灵 → demo → `resources/index.html` → `neu update` 兜底 → `neu build --embed-resources` → mac 自建 `.app`+adhoc 签名）。**四坑实证**：① 运行时只认 `/resources/index.html`、config `url` 不生效（日志 `NE_RS_UNBLDRE`）——原报「打开是项目主页」= 单拷 exe 缺配对资源回落官方欢迎页，修 = embed 内嵌 + 入口名 index.html；② `neu build --macos-bundle` 假 bundle（裸 Mach-O 改名，`open` 报 incorrect executable format）→ 脚本自建真 bundle；③ macOS 27 launchd 拒无签名 bundle（errno 163）→ adhoc `codesign` 必须；④ exFAT `._*` 幽灵绊 codesign（"code object is not signed"）→ 签前清幽灵；产物清单 dirKb 曾把递归 KB 当 bytes 累加（1KB 假数）→ 统一返回 bytes。验收：`open` 启动 + 窗口 vision 实证 = 完整游戏画面（用户确认可启动）；入库面仅 config+脚本+package.json+.gitignore（shell/{bin,dist,resources,*.log} 全忽略）|
 
 ---
 
@@ -733,21 +734,22 @@ CI：headless 单测 + 配置校验 + 平衡回归（§6.1 `sim`）→ Godot 导
 **轨 B · 游戏（发行壳 = Neutralinojs；工具/编辑器 = Tauri 不变。2026-10-07 四壳实测定案，用户拍板「发行用 2、工具留 1」）**：
 
 - **分家理由**：两壳零协同 —— 编辑器管线独立，游戏壳零逻辑踩不上 Tauri 强项（深原生集成 / capabilities 权限体系）；Neutralino 在**发行相关**指标全胜。同机实测（Tauri / Neutralino / Wails / Electrobun）：单平台体积 **3.2MB** vs Tauri 9.9MB / Wails 9.7MB；构建 **1.3s** vs 13s / 60s；`neu run` chokidar **唯一免编译热更**；**单机一次 build 直出 win+linux+mac**（复制预编译二进制，免 CI 矩阵）；内存 98.5MB ≈ Tauri 99MB。淘汰：Electrobun（稳态 ~605MB、外置盘不能跑、擅改 `~/.zshrc`、报错无 URL）、Wails（构建 60s、exFAT 下 dev 废、beta CLI 毛刺）。
-- 形态 = **零逻辑 Neutralino 壳**：`resources/game.html` = `demo/squarefolk.html` 拷贝（三件套不破 —— 壳内零规则）；`neutralino.config.json` 定 url / 窗口 1280×760 / 标题 Squarefolk。
-- 发行形态（实测）：`neu build` → 平台裸二进制 + `resources.neu`（资源归档，ASAR）；`neu build --macos-bundle` → mac `.app` 三档（arm64/x64/universal，**生成已验，结构+启动冒烟待验（用户自测）**）；dmg/msi 安装器需 `@neutralinojs-contrib/builder` 插件（**未装，itch 不需要安装器** —— 传 zip/可执行即可）。
+- **已入库（2026-10-07，v0.27）**：壳工程 = 仓库根 **`shell/`**（`neutralino.config.json`：应用 id `app.squarefolk.demo`、窗口 1280×760、标题 Squarefolk、`nativeAllowList` 空 —— 壳零逻辑零 API）+ `scripts/build-shell.mjs`，入口 **`npm run shell`**：清 `._*` → `npm run demo` → 拷 `demo/squarefolk.html` → `resources/index.html` → 缺 `bin/` 则 `neu update`（GitHub 超时自动重试一次）→ `neu build --embed-resources` →（mac）自建 `.app` + adhoc 签名。入库面仅 config + 脚本（`shell/{bin,dist,resources,*.log}` 全部 gitignore）。
+- 形态 = **零逻辑 Neutralino 壳**：`resources/index.html` = `demo/squarefolk.html` 拷贝（三件套不破 —— 壳内零规则）。⚠ **入口必须叫 `index.html`**：运行时资源加载器只认 `/resources/index.html`，config `url` 字段实测不生效（日志 `NE_RS_UNBLDRE: Unable to load /resources/index.html` 实证）。
+- 发行形态（实测）：`neu build --embed-resources` → 平台裸二进制**内嵌资源**（单文件即游戏；不嵌则须与 `resources.neu` 同目录，单拷 exe 会回落 Neutralino 官方欢迎页 —— 用户报的「打开是项目主页」即此因）；⚠ `neu build --macos-bundle` 本版是**假 bundle**（裸 Mach-O 改名 `.app`，`open` 报 incorrect executable format）→ 真 `.app` 由脚本自建（Info.plist + 嵌入二进制）；⚠ macOS 27 launchd **拒无签名 bundle**（errno 163 spawn failed）→ 脚本 adhoc `codesign -s -` 必须，且 exFAT `._*` 幽灵会绊 codesign（报 "code object is not signed" → 签前清幽灵）。dmg/msi 安装器需 `@neutralinojs-contrib/builder` 插件（**未装，itch 不需要安装器** —— 传 zip/可执行即可）。
 - itch 三通道照旧：`push.sh <owner/game> windows` / `:osx` / `:linux`（脚本 channel 参数化已支持；`html` 通道传网页版 —— **可执行与网页同源同构建**）。
 - ⚠ PoC 实录坑：GitHub 下载超时无自动重试（重试即好）；exFAT `._*` 会打进 resources.neu/dist 虚胖（构建前清 `._*` 或项目放 APFS）；进程名 = 文件名（收尾 `pkill -x`）。
 - **定位**：demo 期**发行壳**（itch）+ 试玩 / 评审 / 无浏览器兜底；**不是** TapTap 或 M1 后正式发行载体 —— **D4 边界不变**：Godot 定案后本壳降级为评审工具或退役，届时才谈 §5.9 的签名与商店流水线。
-- PoC 现场（不入库）：`~/disk/songl/poc-shells/shell-neutralino/`（四壳对比数据与证据截图同目录）。
+- PoC 现场（不入库，仅对比证据）：`~/disk/songl/poc-shells/`（四壳数据与截图）；壳本体已集成入 `shell/`。
 
 **轨 C · CI 骨架（两轨共用，GitHub Actions）**：
 
 1. `test`（ubuntu）：`npm test`（146 断言 + validate + selftest）—— 每 push 必跑。
 2. `editor-build`（matrix: macos / windows / ubuntu）：`tools/editor` tsc + vite + `tauri build` → artifacts 上传；打 tag `editor-v*` 时挂 GitHub Release。
-3. `game-shell-build`（tag `game-v*` 触发）：**单 job**（ubuntu 即可 —— Neutralino 跨平台 = 复制预编译二进制，**无需 OS 矩阵**）：`npm run demo` → 拷 `resources/` → `neu update` + `neu build`（+ `--macos-bundle`）→ 三端产物 → `butler push` 三通道（`BUTLER_KEY` 走 GitHub Secrets，**永不入库**）+ HTML 通道 → GitHub Release 附产物。
+3. `game-shell-build`（tag `game-v*` 触发）：**单 job**（ubuntu 即可 —— Neutralino 跨平台 = 复制预编译二进制，**无需 OS 矩阵**）：`npm run shell`（内含 demo 构建、幽灵清理、`neu update`、embed 构建；mac 打包/签名步骤仅在 mac runner 启用或降级为裸二进制）→ 三端产物 → `butler push` 三通道（`BUTLER_KEY` 走 GitHub Secrets，**永不入库**）+ HTML 通道 → GitHub Release 附产物。
 - 红线继承：keystore / 签名材料 / API key 严禁入库（§5.9 原则）；构建产物不进 git（dist/ 仅本地快照）。
 
-**验收线**：① 轨 A：三平台 `tauri build` 各出可执行且能打开编辑器；② 轨 B：mac `.app` 结构 + 启动冒烟过（用户自测）、win/linux 文件头正确、单平台净重 ≤ 4MB；③ `butler push` 三通道 + html 通道成功；④ CI 三 job 绿。
+**验收线**：① 轨 A：三平台 `tauri build` 各出可执行且能打开编辑器；② 轨 B：mac `.app` **启动冒烟已过**（2026-10-07：`open` 启动 + 窗口 vision 实证 = 完整游戏画面，用户确认可启动）、win/linux 文件头正确、单平台净重 ≤ 4MB；③ `butler push` 三通道 + html 通道成功；④ CI 三 job 绿。
 
 ---
 

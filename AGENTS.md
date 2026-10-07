@@ -63,9 +63,10 @@ data/                内容与数值 JSON 源（balance.json + units/techs/impro
 testdata/golden/     语言无关黄金测试向量
 core/                规则核心（Phase 1：TypeScript，规格 = docs/core-spec.md §4.1）
 demo/                Phase 6 单文件可玩 demo：src/（main/ui/map/config + style.css）、template.html、产物 squarefolk.html（npm run demo 生成）
-scripts/             构建脚本（build-demo.mjs：把 esbuild 的 JS/CSS 内联进 HTML 模板）
+scripts/             构建脚本（build-demo.mjs：把 esbuild 的 JS/CSS 内联进 HTML 模板；build-shell.mjs：Neutralino 发行壳构建，见 npm run shell）
 tools/               配置工具 CLI（validate-core.mjs 纯核心 + validate.mjs / validate-selftest.mjs / dump-core.mjs / dump.mjs + content-hash.mjs 已落地；diff、sim [规划]）
 tools/editor/        桌面数据编辑器（Phase 9 MVP + 9.1 M4 补齐：Tauri 2.x 独立子包，自己的 package.json/node_modules；vite + TS 前端 src/、Rust 后端 src-tauri/）
+shell/               Neutralinojs 游戏发行壳（neutralino.config.json 入库；resources/、bin/、dist/、*.log 全部 gitignore，由 npm run shell 生成 —— design §5.9.1 轨 B）
 ```
 
 > 标 `[规划]` 的目录尚不存在；创建时须按 design §6 的目录结构与命名。
@@ -75,6 +76,7 @@ tools/editor/        桌面数据编辑器（Phase 9 MVP + 9.1 M4 补齐：Tauri
 - **当前**：
   - `npm install` —— 安装 devDependencies（typescript、@types/node、esbuild）
   - `npm run demo` —— esbuild 打包 `demo/src`（`--bundle --format=iife --minify` → `demo/.build/`）+ `scripts/build-demo.mjs` 把 JS/CSS 内联进 `demo/template.html` → 产出单文件 `demo/squarefolk.html`（自检：文件存在、含 `<!DOCTYPE html>`、无 `src=`/`href=` 外链、打印大小）；`file://` 双击即玩，无外部请求。demo 不进 `npm test` 测试链；类型自查 `npx tsc -p demo/tsconfig.json`
+  - `npm run shell` —— 构建 Neutralinojs 发行壳（前置 `npm i -g @neutralinojs/neu`；脚本自带 neu 安装位探测，PATH 不含 homebrew 也行）：清 `._*` → `npm run demo` → 拷 `resources/index.html` → 缺 `shell/bin/` 自动 `neu update`（GitHub 超时重试一次）→ `neu build --embed-resources`（资源内嵌，单文件即游戏）→（mac）自建 `.app` + adhoc codesign（macOS 27 launchd 拒无签名，exFAT `._*` 会绊 codesign）→ 产物清单打到 `shell/dist/squarefolk/`。⚠ 入口必须叫 `index.html`（运行时不认 config 的 `url`）；`neu build --macos-bundle` 是假 bundle 勿用。设计与坑全录 design §5.9.1 轨 B
   - `npm test` —— `tsc` 编译 + 跑 `testdata/golden/combat/`、`testdata/golden/meta/`、`testdata/golden/move/`、`testdata/golden/vision/`、`testdata/golden/territory/`、`testdata/golden/turn/`、`testdata/golden/world/` 全部黄金向量 + 移动边角单测 + 视野/领地边角单测（viewFor 三态、radius 映射、tie-break、无源空集）+ 动作管线边角单测（征服胜利、killSwap 受阻、被围城收入归零、治疗本土/境外、科技前置拒绝、无城宽限计数与占城清零、轮转跳过淘汰者、淘汰移兵、build 拒绝七条措辞与道路只写 road、改善产出结算与领地易主、D6 围城攻占（两路拒绝理由逐字、墙破翻转不变量、占领门两条件逐字拒绝、占领落地逐字段与 pop 下限、被动侵蚀触 0 墙破与 ≥2 边界、killSwap 撞墙门、siegeDamage=0/缺省拒绝、侵蚀破墙后城防回归））+ 序列化/哈希/状态不变量单元断言 + 世界生成单测（同 seed 逐字段幂等、seed+1 地图必异、参数浅合并优先级、大图 30×30 耗时上界）+ `node tools/validate.mjs`（data/ 五文件 schema 校验 + 交叉引用，0 报错）+ `node tools/validate-selftest.mjs`（7 例故意破坏样例必须全被抓住）（逐条 PASS/FAIL + 汇总，任一失败非零退出）
   - `npm run validate` —— 只跑 `tools/validate.mjs`（薄壳）：读 data/ 五文件 + 五个 schema → 调纯核心 `tools/validate-core.mjs`（JSON Schema 子集解释器，子集边界见核心文件头）+ design §6.1 交叉引用检查（科技树无环、tech 悬空引用、allowedOn ⊆ 已知地形、id 规范、数值区间）
   - `node tools/dump.mjs [dataDir] [outFile]` —— 五件数据 → 玩家可读 Markdown 总表（兵种/科技/改善/资源/数值摊平五段；渲染在纯核心 `tools/dump-core.mjs`，编辑器「导出」按钮同源）；缺省打印 stdout

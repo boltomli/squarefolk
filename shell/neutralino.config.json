@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "app.squarefolk.demo",
+  "version": "0.1.0",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/resources/",
+  "url": "/index.html",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeAllowList": [],
+  "modes": {
+    "window": {
+      "title": "Squarefolk",
+      "width": 1280,
+      "height": 760,
+      "minWidth": 960,
+      "minHeight": 600,
+      "center": true,
+      "fullScreen": false,
+      "alwaysOnTop": false,
+      "enableInspector": false,
+      "borderless": false,
+      "maximize": false,
+      "hidden": false,
+      "resizable": true,
+      "exitProcessOnClose": true
+    }
+  },
+  "cli": {
+    "binaryName": "squarefolk",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "binaryVersion": "6.10.0",
+    "clientVersion": "6.10.0"
+  }
+}

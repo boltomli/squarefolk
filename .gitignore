@@ -25,3 +25,9 @@ node_modules/
 
 # 日志
 *.log
+
+# Neutralinojs 游戏壳（shell/）
+shell/bin/
+shell/.neu/
+shell/extensions/
+shell/resources/
